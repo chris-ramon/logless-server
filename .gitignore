@@ -1,0 +1,28 @@
+node_modules/
+.idea/
+*.log
+**/*.iml
+target/
+coverage/
+index.js.map
+
+# Do not track the generated javascript and map files from typescript
+bin/**/*.js
+bin/**/*.map
+lib/**/*.js
+lib/**/*.map
+test/**/*.js
+test/**/*.map
+test/resources/.bst/config
+
+**/.DS_Store
+
+typings/globals/
+typings/modules/
+
+# generated docs
+site/
+
+# Include all stuff under test resources
+!test/resources/*
+
