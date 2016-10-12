@@ -1,53 +1,86 @@
 import * as express from "express";
 import * as bodyParser from "body-parser";
+import Collections = require('typescript-collections');
 
-import * as User from "../lib/User";
+import * as Log from "../lib/log"
+import {NameGen} from "../lib/name-generator";
 
-var app = express();
-var mongoose = require('mongoose');
-mongoose.connect("mongodb://localhost/mydb");
+let app = express();
+let mongoose = require('mongoose');
+mongoose.connect("mongodb://localhost/loggerdb");
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
     extended: true
 }));
 
+let usedNames = new Collections.Set<string>();
+
+let checker = function (name) : boolean {
+    if (usedNames.contains(name)) {
+        return true;
+    } else {
+        usedNames.add(name);
+        return false;
+    }
+}
+
+let nameError = {
+    message: "Name generation failed", name: "NameError", errors: {}
+};
+
+/* Source name generator */
+app.get('/api/source', function (req, res) {
+    let newName = NameGen.getName(checker);
+
+    if (!newName) {
+        res.json({info: 'No more names', error: nameError});
+    } else {
+        res.json({source: newName});
+    }
+});
+
+
 /* Create */
-app.post('/api/user', function (req, res) {
-    var newUser = new User(req.body);
-    newUser.save((err)=>{
-        if (err){
-            res.json({info: 'error during User create', error: err});
+app.post('/api/receive', function (req, res) {
+    var newLog = new Log(req.body);
+    newLog.save((err)=> {
+        if (err) {
+            res.json({info: 'Error during log entry create', error: err});
+        } else {
+            res.json({data: newLog});
         }
-        res.json({info: 'User saved successfully', data: newUser});
+    });
+});
+
+/* Query by source*/
+app.get('/api/query/source', function (req, res) {
+    var query = {source: req.params.source};
+
+    Log.find(query, function (err, logs) {
+        if (err) {
+            res.json({info: 'Error during finding logs', error: err});
+        } else {
+            if (logs) {
+                res.json({data: logs});
+            } else {
+                res.json({info: 'Logs not found:' + req.params.source});
+            }
+        }
     });
 });
 
 /* Read all */
-app.get('/api/user', function (req, res) {
-    User.find((err, Users) => {
+app.get('/api/log', function (req, res) {
+    Log.find((err, logs) => {
         if (err) {
-            res.json({info: 'error during find Users', error: err});
-        };
-        res.json({info: 'Users found successfully', data: Users});
-    });
-});
-
-/* Find one */
-app.get('/api/user/:name', function (req, res) {
-    var query = { name: req.params.name};
-    User.findOne(query, function(err, User) {
-        if (err) {
-            res.json({info: 'error during find User', error: err});
-        };
-        if (User) {
-            res.json({info: 'User found successfully', data: User});
+            res.json({info: 'Error during finding logs', error: err});
         } else {
-            res.json({info: 'User not found with name:'+ req.params.name});
+            res.json({data: logs});
         }
     });
 });
 
 var server = app.listen(3000, function () {
-    console.log('Server listening on port 3000');
+    console.log('The BST logger server listening on port 3000');
 });
