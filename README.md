@@ -6,7 +6,7 @@
 Clone it:
 
 ```bash
-$ git clone https://github.com/bespoken/bst-logging-server.git
+$ git clone https://github.com/bespoken/logless-server.git
 ```
 
 Initial setup:
