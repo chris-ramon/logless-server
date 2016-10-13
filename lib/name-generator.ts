@@ -2,7 +2,7 @@
  * Created by bvizy on 10/12/16.
  */
 
-var util = require('util');
+let util = require("util");
 
 // This is a port of the Docker 0.7.x go code that generates names from notable scientists and hackers.
 // https://github.com/dotcloud/docker/blob/master/pkg/namesgenerator/names-generator.go
