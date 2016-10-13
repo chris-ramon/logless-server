@@ -33,7 +33,7 @@ let swaggerDefinition = {
         description: "RESTful API to store and retrieve logs",
     },
     host: serverConfig.swagger_url,
-    basePath: "/api",
+    basePath: "/v1",
 };
 
 // options for the swagger docs
@@ -56,7 +56,7 @@ mongoose.connect(serverConfig.mongo_url);
 
 // serve swagger
 
-app.get("/api/swagger.json", function(req, res) {
+app.get("/v1/swagger.json", function(req, res) {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
 });
@@ -90,10 +90,44 @@ const nameError = {
  *       name:
  *         type: string
  *       errors:
- *         type: [string]
+ *         type: array
+ *         items:
+ *           type: string
  */
 
 /**
+ * @swagger
+ * definition:
+ *   Log:
+ *     properties:
+ *       payload:
+ *         type: string
+ *       transaction_id:
+ *         type: string
+ *       tags:
+ *         type: array
+ *         items:
+ *           type: string
+ *       timestamp:
+ *         type: string
+ *       log_type:
+ *         type: string
+ *       id:
+ *         type: string
+ */
+
+ /**
+ * @swagger
+ * definition:
+ *   LogList:
+ *     properties:
+ *       data:
+ *         type: array
+ *         items:
+ *           "#/definitions/Log"
+ */
+
+ /**
  * @swagger
  * definition:
  *   Source:
@@ -104,16 +138,25 @@ const nameError = {
 
 /**
  * @swagger
+ * definition:
+ *   Info:
+ *     properties:
+ *       info:
+ *         type: string
+ */
+
+/**
+ * @swagger
  * /source:
  *   get:
  *     tags:
- *       - Logging source
+ *       - Source
  *     description: Returns a generated logging source name
  *     produces:
  *       - application/json
  *     responses:
  *       200:
- *         description: An array of puppies
+ *         description: Successful name generation
  *         schema:
  *           $ref: "#/definitions/Source"
  *       400:
@@ -122,7 +165,7 @@ const nameError = {
  *           $ref: "#/definitions/Error"
  */
 
-app.get("/api/source", function (req, res) {
+app.get("/v1/source", function (req, res) {
     let newName = NameGen.getName(checker);
 
     if (!newName) {
@@ -132,20 +175,35 @@ app.get("/api/source", function (req, res) {
     }
 });
 
-/* Create */
-app.post("/api/receive1", function (req, res) {
-    let newLog = new Log(req.body);
-    newLog.save((err) => {
-        if (err) {
-            res.json({info: "Error during log entry create", error: err});
-        } else {
-            res.json({data: newLog});
-        }
-    });
-});
+/**
+ * @swagger
+ * /receive:
+ *   post:
+ *     tags:
+ *       - Save a batch of logs
+ *     description: Saves a batch of log entries
+ *     produces:
+ *       - application/json
+ *     consumes:
+ *       - application/json
+ *     parameters:
+ *       - name: body
+ *         in: body
+ *         required: true
+ *         schema:
+ *           $ref: Log
+ *     responses:
+ *       200:
+ *         description: Log entries were saved
+ *         schema:
+ *           $ref: "#/definitions/Info"
+ *       400:
+ *         description: Error message
+ *         schema:
+ *           $ref: "#/definitions/Error"
+ */
 
-/* Batch */
-app.post("/api/receive", function (req, res) {
+app.post("/v1/receive", function (req, res) {
     let batch = req.body;
     let logs: any[] = [];
 
@@ -172,8 +230,43 @@ app.post("/api/receive", function (req, res) {
     });
 });
 
-/* Query by source and time */
-app.get("/api/query", function (req, res) {
+/**
+ * @swagger
+ * /query:
+ *   get:
+ *     tags:
+ *       - Query
+ *     description: Queries the log db
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: source
+ *         in: query
+ *         description: Log source id
+ *         required: true
+ *         type: string
+ *       - name: start_time
+ *         in: query
+ *         description: Log source id
+ *         required: true
+ *         type: string
+ *       - name: end_time
+ *         in: query
+ *         description: Log source id
+ *         required: false
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Log entry was saved
+ *         schema:
+ *           $ref: "#/definitions/LogList"
+ *       400:
+ *         description: Error message
+ *         schema:
+ *           $ref: "#/definitions/Error"
+ */
+
+app.get("/v1/query", function (req, res) {
     let query = {
         source: req.query.source,
         timestamp: {}
@@ -200,7 +293,7 @@ app.get("/api/query", function (req, res) {
 });
 
 /* Read all */
-app.get("/api/log", function (req, res) {
+app.get("/v1/log", function (req, res) {
     Log.find((err, logs) => {
         if (err) {
             res.json({info: "Error during finding logs", error: err});
