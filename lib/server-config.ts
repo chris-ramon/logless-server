@@ -1,3 +1,4 @@
+import {mongo} from "mongoose";
 /**
  * Created by bvizy on 10/12/16.
  */
@@ -25,11 +26,17 @@ export class ServerConfig {
             throw err;
         }
 
-        let env = process.argv[2] || process.env.env || "default";
+        let env = process.env.env || "default";
 
-        this.server_port = props.get(env+".server_port" ) || props.get("default.server_port" ) || "3000";
-        this.mongo_url = props.get(env+".mongo_url" ) || props.get("default.mongo_url" ) || "mongodb://localhost/loggerdb";
-        this.swagger_url = props.get(env+".swagger_url" ) || props.get("default.swagger_url" ) || "localhost:3000";
+        this.server_port = props.get(env+".server_port" ) || props.get("default.server_port" );
+        this.swagger_url = props.get(env+".swagger_url" ) || props.get("default.swagger_url" );
+
+        this.mongo_url = process.env.BST_MONGO_URL || props.get(env+".mongo_url" ) || props.get("default.mongo_url" );
+
+        if (!this.mongo_url) {
+            console.error("Mongo db url is not set. Use the BST_MONGO_URL shell environment variable!");
+            process.exit(1);
+        }
 
         console.log("Server environment: "+env);
         console.log("Port: "+this.server_port);

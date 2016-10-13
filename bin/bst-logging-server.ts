@@ -4,6 +4,7 @@ import Collections = require("typescript-collections");
 import * as Log from "../lib/log";
 import {NameGen} from "../lib/name-generator";
 import {ServerConfig} from "../lib/server-config";
+import async = require("async");
 
 let mongoose = require("mongoose");
 
@@ -131,15 +132,42 @@ app.get("/api/source", function (req, res) {
     }
 });
 
-
 /* Create */
-app.post("/api/receive", function (req, res) {
+app.post("/api/receive1", function (req, res) {
     let newLog = new Log(req.body);
     newLog.save((err) => {
         if (err) {
             res.json({info: "Error during log entry create", error: err});
         } else {
             res.json({data: newLog});
+        }
+    });
+});
+
+/* Batch */
+app.post("/api/receive", function (req, res) {
+    let batch = req.body;
+    let logs: any[] = [];
+
+    for (let log of batch.logs) {
+        log["source"] = batch.source;
+        log["transaction_id"] = batch.transaction_id;
+        logs.push(log);
+    }
+
+    async.mapLimit(logs, 10, function(l1, callback) {
+        let newLog = new Log(l1);
+        newLog.save((err) => {
+            if (err)
+                return callback(err, l1);
+
+            callback(null, l1);
+        })
+    }, function(err, results) {
+        if (err) {
+            res.json({info: "Error during log entry create", error: err});
+        } else {
+            res.json({info: results.length + " inserted"});
         }
     });
 });
@@ -183,5 +211,5 @@ app.get("/api/log", function (req, res) {
 });
 
 let _server = app.listen(parseInt(serverConfig.server_port), function () {
-    console.log("The BST logger server listening on port 3000");
+    console.log("The BST logger server listening on port "+serverConfig.server_port);
 });

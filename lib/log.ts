@@ -28,6 +28,7 @@ let logSchema = new mongoose.Schema({
         type: String,
         required: [true, "Transaction ID is missing"]
     },
+
     payload: {
         type: String,
         required: [true, "Payload is missing"]
