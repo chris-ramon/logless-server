@@ -24,6 +24,8 @@ $ export BST_MONGO_URL=mongodb://xappuser:XappXapp2016@ds029804.mlab.com:29804/x
 $ node bin/bst-logging-server.js
 ```
 
+(See me for the password. It's not that.)
+
 ## Configuration
 
 You can tweak the config in ./config.properties but don't put Mongo credentials in it. Use **BST_MONGO_URL** environment variable instead.
