@@ -1,10 +1,13 @@
 import * as express from "express";
 import * as bodyParser from "body-parser";
 import Collections = require("typescript-collections");
-
 import * as Log from "../lib/log";
 import {NameGen} from "../lib/name-generator";
-import {isUndefined} from "typescript-collections/dist/lib/util";
+import {ServerConfig} from "../lib/server-config";
+
+let mongoose = require("mongoose");
+
+let serverConfig = ServerConfig.create();
 
 let app = express();
 
@@ -28,7 +31,7 @@ let swaggerDefinition = {
         version: "1.0.0",
         description: "RESTful API to store and retrieve logs",
     },
-    host: "localhost:3000",
+    host: serverConfig.swagger_url,
     basePath: "/api",
 };
 
@@ -46,8 +49,9 @@ let options = {
 
 let swaggerSpec = swaggerJSDoc(options);
 
-let mongoose = require("mongoose");
-mongoose.connect("mongodb://localhost/loggerdb");
+// Connect to mongo
+
+mongoose.connect(serverConfig.mongo_url);
 
 // serve swagger
 
@@ -178,6 +182,6 @@ app.get("/api/log", function (req, res) {
     });
 });
 
-let _server = app.listen(3000, function () {
+let _server = app.listen(parseInt(serverConfig.server_port), function () {
     console.log("The BST logger server listening on port 3000");
 });
