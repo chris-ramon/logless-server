@@ -252,7 +252,7 @@ app.post("/v1/receive", function (req, res) {
                 return callback(err, l1);
 
             callback(null, l1);
-        })
+        });
     }, function(err, results) {
         if (err) {
             res.json({info: "Error during log entry create", error: err});
@@ -360,5 +360,5 @@ app.get("/v1/log", function (req, res) {
 });
 
 let _server = app.listen(parseInt(serverConfig.server_port), function () {
-    console.log("The BST logger server listening on port "+serverConfig.server_port);
+    console.log("The BST logger server listening on port " + serverConfig.server_port);
 });
