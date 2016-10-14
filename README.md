@@ -32,7 +32,7 @@ You can tweak the config in ./config.properties but don't put Mongo credentials 
 
 ## Mongo
 
-This database above is an mLab hosted free sandbox. You can change the db name at the end of the string (xapplog) to work in your own sand box.
+This database above is an mLab hosted free sandbox. You can change the db name at the end of the string (xapplog) to work in your own sandbox.
 
 ## Swagger 
 

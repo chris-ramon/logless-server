@@ -83,26 +83,9 @@ const nameError = {
 /**
  * @swagger
  * definition:
- *   Error:
- *     properties:
- *       message:
- *         type: string
- *       name:
- *         type: string
- *       errors:
- *         type: array
- *         items:
- *           type: string
- */
-
-/**
- * @swagger
- * definition:
  *   Log:
  *     properties:
  *       payload:
- *         type: string
- *       transaction_id:
  *         type: string
  *       tags:
  *         type: array
@@ -112,11 +95,47 @@ const nameError = {
  *         type: string
  *       log_type:
  *         type: string
+ */
+
+/**
+ * @swagger
+ * definition:
+ *   Logs:
+ *     properties:
+ *       source:
+ *         type: string
+ *       transaction_id:
+ *         type: string
+ *       logs:
+ *         type: array
+ *         items:
+ *           '#/definitions/Log'
+ */
+
+/**
+ * @swagger
+ * definition:
+ *   LogResult:
+ *     properties:
+ *       payload:
+ *         type: string
+ *       source:
+ *         type: string
+ *       tags:
+ *         type: array
+ *         items:
+ *           type: string
+ *       transaction_id:
+ *         type: string
+ *       timestamp:
+ *         type: string
+ *       log_type:
+ *         type: string
  *       id:
  *         type: string
  */
 
- /**
+/**
  * @swagger
  * definition:
  *   LogList:
@@ -124,7 +143,7 @@ const nameError = {
  *       data:
  *         type: array
  *         items:
- *           "#/definitions/Log"
+ *           '#/definitions/LogResult'
  */
 
  /**
@@ -143,6 +162,21 @@ const nameError = {
  *     properties:
  *       info:
  *         type: string
+ */
+
+/**
+ * @swagger
+ * definition:
+ *   Error:
+ *     properties:
+ *       message:
+ *         type: string
+ *       name:
+ *         type: string
+ *       errors:
+ *         type: array
+ *         items:
+ *           type: string
  */
 
 /**
@@ -180,21 +214,20 @@ app.get("/v1/source", function (req, res) {
  * /receive:
  *   post:
  *     tags:
- *       - Save a batch of logs
- *     description: Saves a batch of log entries
+ *       - Logs
+ *     description: Creates new log entries
  *     produces:
  *       - application/json
- *     consumes:
- *       - application/json
  *     parameters:
- *       - name: body
+ *       - name: logs
+ *         description: Log list
  *         in: body
  *         required: true
  *         schema:
- *           $ref: Log
+ *           $ref: '#/definitions/Logs'
  *     responses:
  *       200:
- *         description: Log entries were saved
+ *         description: Successfully created
  *         schema:
  *           $ref: "#/definitions/Info"
  *       400:
@@ -202,7 +235,6 @@ app.get("/v1/source", function (req, res) {
  *         schema:
  *           $ref: "#/definitions/Error"
  */
-
 app.post("/v1/receive", function (req, res) {
     let batch = req.body;
     let logs: any[] = [];
@@ -247,19 +279,43 @@ app.post("/v1/receive", function (req, res) {
  *         type: string
  *       - name: start_time
  *         in: query
- *         description: Log source id
+ *         description: The start period to get logs from (ISO format)
  *         required: true
  *         type: string
  *       - name: end_time
  *         in: query
- *         description: Log source id
+ *         description: The end period to get logs from (ISO format)
  *         required: false
  *         type: string
  *     responses:
  *       200:
- *         description: Log entry was saved
+ *         description: Successful response
  *         schema:
- *           $ref: "#/definitions/LogList"
+ *           title: ArrayOfLogs
+ *           type: object
+ *           properties:
+ *             logs:
+ *               type: array
+ *               items:
+ *                 title: Log
+ *                 type: object
+ *                 properties:
+ *                   payload:
+ *                     type: string
+ *                   source:
+ *                     type: string
+ *                   tags:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   transaction_id:
+ *                     type: string
+ *                   timestamp:
+ *                     type: string
+ *                   log_type:
+ *                     type: string
+ *                   id:
+ *                     type: string
  *       400:
  *         description: Error message
  *         schema:
