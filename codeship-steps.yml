@@ -7,7 +7,7 @@
   type: push
   service: app
   tag: master
-  image_name: node:6.3.0
+  image_name: xappmedia/logless-server
   image_tag: "{{.Branch}}.dev"
   registry: https://index.docker.io/v1/
   encrypted_dockercfg_path: dockercfg.encrypted
