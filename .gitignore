@@ -26,3 +26,6 @@ site/
 # Include all stuff under test resources
 !test/resources/*
 
+# Codeship key
+codeship.aes
+

@@ -6,10 +6,14 @@ import {NameGen} from "../lib/name-generator";
 import {ServerConfig} from "../lib/server-config";
 import async = require("async");
 
-let mongoose = require("mongoose");
-
 let serverConfig = ServerConfig.create();
+let configError = serverConfig.initialize("./config.properties");
+if (configError) {
+    console.error("Configurator ha a problem: " + configError.message);
+    process.exit(2);
+}
 
+let mongoose = require("mongoose");
 let app = express();
 
 app.use(bodyParser.json());
