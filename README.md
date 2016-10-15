@@ -1,5 +1,8 @@
 # bst-logging-server
 
+![Build Status](https://codeship.com/projects/9d43a8e0-73ad-0134-1def-2221f4e2997e/status?branch=master)
+
+
 ## Installation
 
 
