@@ -338,7 +338,7 @@ app.get("/v1/query", function (req, res) {
         query.timestamp = {$gt: req.query.start_time};
     }
 
-    Log.find(query, function (err, logs) {
+    Log.find(query, null, {sort: {timestamp: -1}}, (err, logs) => {
         if (err) {
             res.json({info: "Error during finding logs", error: err});
         } else {
