@@ -28,13 +28,18 @@ let logSchema = new mongoose.Schema({
         type: String,
         required: [true, "Transaction ID is missing"]
     },
-
     payload: {
-        type: String,
+        type: Object,
         required: [true, "Payload is missing"]
     },
+    stack: {
+        type: String,
+    },
     tags: [String],
-    timestamp: {type: Date, default: Date.now},
+    timestamp: {
+        type: Date,
+        default: Date.now
+    },
     log_type: {
         type: String,
         enum: ["VERBOSE", "DEBUG", "INFO", "WARN", "ERROR"],

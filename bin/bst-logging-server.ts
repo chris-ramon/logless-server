@@ -349,12 +349,15 @@ app.get("/v1/query", function (req, res) {
             }
         }
     });
+
+    // For pagination later ...
+    //  .skip(0)
     //  .limit(100)
 });
 
 /* Read all */
 app.get("/v1/log", function (req, res) {
-    Log.find((err, logs) => {
+    Log.find({}, null, {sort: {timestamp: -1}}, (err, logs) => {
         if (err) {
             res.json({info: "Error during finding logs", error: err});
         } else {
