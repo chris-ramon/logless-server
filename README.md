@@ -70,9 +70,9 @@ http://localhost:3000/v1/receive
 
 GET this to query logs:
 
-http://localhost:3000/api/query?source=happy_einstein&start_time=2016-10-12T16:00:30.811Z&end_time=2016-10-12T16:04:30.811Z
+http://localhost:3000/v1/query?source=happy_einstein&start_time=2016-10-12T16:00:30.811Z&end_time=2016-10-12T16:04:30.811Z
 
 
 GET a new source name:
 
-http://localhost:3000/api/source
+http://localhost:3000/v1/source
