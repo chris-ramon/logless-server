@@ -39,7 +39,7 @@ function default_1(req, res) {
         log["transaction_id"] = batch.transaction_id;
         logs.push(log);
     }
-    async.mapLimit(logs, 10, function (l1, callback) {
+    async.mapLimit(logs, 100, function (l1, callback) {
         var newLog = new Log(l1);
         newLog.save(function (err) {
             if (err)
@@ -48,12 +48,13 @@ function default_1(req, res) {
         });
     }, function (err, results) {
         if (err) {
-            res.json({ info: "Error during log entry create", error: err });
+            console.error({ info: "Error during log entry create", error: err });
         }
-        else {
-            res.json({ info: results.length + " inserted" });
-        }
+        // else {
+        //     console.log({info: results.length + " inserted"});
+        // }
     });
+    res.json({ logs: logs.length });
 }
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = default_1;

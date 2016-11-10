@@ -42,7 +42,7 @@ export default function (req, res) {
         logs.push(log);
     }
 
-    async.mapLimit(logs, 10, function(l1, callback) {
+    async.mapLimit(logs, 100, function(l1, callback) {
         let newLog = new Log(l1);
         newLog.save((err) => {
             if (err)
@@ -52,10 +52,13 @@ export default function (req, res) {
         });
     }, function(err, results) {
         if (err) {
-            res.json({info: "Error during log entry create", error: err});
-        } else {
-            res.json({info: results.length + " inserted"});
+            console.error({info: "Error during log entry create", error: err});
         }
+        // else {
+        //     console.log({info: results.length + " inserted"});
+        // }
     });
+
+    res.json({logs: logs.length});
 };
 
