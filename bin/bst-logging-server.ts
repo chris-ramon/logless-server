@@ -4,9 +4,11 @@ import {ServerConfig} from "../lib/server-config";
 import receive from "../controllers/receive";
 import query from "../controllers/query";
 import source from "../controllers/source";
-import allLogs from "../controllers/all-logs";
+import {Utils} from "../lib/utils";
 
 let mongoose = require("mongoose");
+
+console.log("BST Logless server v" + Utils.version());
 
 /**
  * Server setup
@@ -89,7 +91,12 @@ app.get("/v1/query", query);
 app.get("/v1/source", source);
 
 /* All */
-app.get("/v1/log", allLogs);
+// app.get("/v1/log", allLogs);
+
+/* Health */
+app.get("/", function (req, res) {
+    res.json({version: Utils.version()});
+});
 
 /**
  * Fire up the server
