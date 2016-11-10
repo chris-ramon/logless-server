@@ -1,9 +1,8 @@
 /**
  * Created by bvizy on 10/26/16.
  */
-
-import Log = require("../lib/log");
-
+"use strict";
+var Log = require("../lib/log");
 /**
  * @swagger
  * /query:
@@ -69,33 +68,35 @@ import Log = require("../lib/log");
  *             error:
  *               type: object
  */
-
-export default function (req, res) {
-    let query = {
+function default_1(req, res) {
+    var query = {
         source: req.query.source,
         timestamp: {}
     };
-
     if (req.query.end_time) {
-        query.timestamp = {$gt: req.query.start_time, $lt: req.query.end_time};
-    } else {
-        query.timestamp = {$gt: req.query.start_time};
+        query.timestamp = { $gt: req.query.start_time, $lt: req.query.end_time };
     }
-
-    Log.find(query, null, {sort: {timestamp: -1}}, (err, logs) => {
+    else {
+        query.timestamp = { $gt: req.query.start_time };
+    }
+    Log.find(query, null, { sort: { timestamp: -1 } }, function (err, logs) {
         if (err) {
-            res.json({info: "Error during finding logs", error: err});
-        } else {
+            res.json({ info: "Error during finding logs", error: err });
+        }
+        else {
             if (logs) {
-                res.json({data: logs});
-            } else {
-                res.json({info: "Logs not found"});
+                res.json({ data: logs });
+            }
+            else {
+                res.json({ info: "Logs not found" });
             }
         }
     });
-
     // For pagination later ...
     //  .skip(0)
     //  .limit(100)
-};
-
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = default_1;
+;
+//# sourceMappingURL=query.js.map

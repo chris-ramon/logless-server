@@ -1,10 +1,9 @@
 /**
  * Created by bvizy on 10/26/16.
  */
-
-import Log = require("../lib/log");
-import async = require("async");
-
+"use strict";
+var Log = require("../lib/log");
+var async = require("async");
 /**
  * @swagger
  * /receive:
@@ -31,31 +30,32 @@ import async = require("async");
  *         schema:
  *           $ref: "#/definitions/Error"
  */
-
-export default function (req, res) {
-    let batch = req.body;
-    let logs: any[] = [];
-
-    for (let log of batch.logs) {
+function default_1(req, res) {
+    var batch = req.body;
+    var logs = [];
+    for (var _i = 0, _a = batch.logs; _i < _a.length; _i++) {
+        var log = _a[_i];
         log["source"] = batch.source;
         log["transaction_id"] = batch.transaction_id;
         logs.push(log);
     }
-
-    async.mapLimit(logs, 10, function(l1, callback) {
-        let newLog = new Log(l1);
-        newLog.save((err) => {
+    async.mapLimit(logs, 10, function (l1, callback) {
+        var newLog = new Log(l1);
+        newLog.save(function (err) {
             if (err)
                 return callback(err, l1);
-
             callback(null, l1);
         });
-    }, function(err, results) {
+    }, function (err, results) {
         if (err) {
-            res.json({info: "Error during log entry create", error: err});
-        } else {
-            res.json({info: results.length + " inserted"});
+            res.json({ info: "Error during log entry create", error: err });
+        }
+        else {
+            res.json({ info: results.length + " inserted" });
         }
     });
-};
-
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = default_1;
+;
+//# sourceMappingURL=receive.js.map

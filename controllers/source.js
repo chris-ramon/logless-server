@@ -51,4 +51,4 @@ var checker = function (name) {
 var nameError = {
     message: "Name generation failed", name: "NameError", errors: {}
 };
-//# sourceMappingURL=source-name.js.map
+//# sourceMappingURL=source.js.map
