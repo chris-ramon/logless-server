@@ -6,7 +6,7 @@ let fs = require("fs");
 
 export class Utils {
     public static version() {
-        let json = JSON.parse(fs.readFileSync("package.json", 'utf8'));
+        let json = JSON.parse(fs.readFileSync("package.json", "utf8"));
         return json.version;
     }
 };
