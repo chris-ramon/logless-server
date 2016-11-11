@@ -1,4 +1,5 @@
 node_modules/
+typings/
 .idea/
 *.log
 **/*.iml
@@ -18,9 +19,6 @@ test/**/*.map
 test/resources/.bst/config
 
 **/.DS_Store
-
-typings/globals/
-typings/modules/
 
 # generated docs
 site/
