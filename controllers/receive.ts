@@ -43,28 +43,32 @@ export default function (req, res) {
         logs.push(log);
     }
 
-    async.mapLimit(logs, 10, function(l1, callback) {
-        if (ServerConfig.debug_mode) {
-            console.log(l1);
-        }
+    Log.insertMany(logs, onInsert);
 
-        let newLog = new Log(l1);
-        newLog.save((err) => {
-            if (err)
-                return callback(err, l1);
+    // async.mapLimit(logs, 10, function(l1, callback) {
+    //     if (ServerConfig.debug_mode) {
+    //         console.log(l1);
+    //     }
+    //
+    //     let newLog = new Log(l1);
+    //     newLog.save((err) => {
+    //         if (err)
+    //             return callback(err, l1);
+    //
+    //         callback(null, l1);
+    //     });
+    // }, onInsert);
 
-            callback(null, l1);
-        });
-    }, function(err, results) {
+    function onInsert(err, results) {
         if (err) {
             console.error({info: "Error during log entry create", source: batch.source, tx: batch.transaction_id, error: err});
         }
         else {
             if (ServerConfig.debug_mode) {
-                console.log({info: results.length + " logs inserted", source: batch.source, tx: batch.transaction_id});
+                console.log({info: logs.length + " logs inserted", source: batch.source, tx: batch.transaction_id});
             }
-         }
-    });
+        }
+    }
 
     res.json({logs: logs.length});
 };

@@ -4,6 +4,7 @@
 /// <reference path="globals/express/index.d.ts" />
 /// <reference path="globals/mocha/index.d.ts" />
 /// <reference path="globals/mockery/index.d.ts" />
+/// <reference path="globals/mongoose/index.d.ts" />
 /// <reference path="globals/node/index.d.ts" />
 /// <reference path="globals/serve-static/index.d.ts" />
 /// <reference path="globals/sinon/index.d.ts" />
