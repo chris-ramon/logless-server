@@ -9,6 +9,8 @@ index.js.map
 # Do not track the generated javascript and map files from typescript
 bin/**/*.js
 bin/**/*.map
+controllers/**/*.js
+controllers/**/*.map
 lib/**/*.js
 lib/**/*.map
 test/**/*.js
