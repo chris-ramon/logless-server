@@ -68,13 +68,13 @@ let swaggerSpec = swaggerJSDoc(options);
  * Connect Mongoos
  */
 
-var mongooseOptions = {
+let mongooseOptions = {
     db: { native_parser: true },
     server: { poolSize: 10 }
     // replset: { rs_name: 'myReplicaSetName' } // HA (!)
-}
+};
 
-mongoose.Promise = require('bluebird');
+mongoose.Promise = require("bluebird");
 mongoose.connect(ServerConfig.mongo_url, mongooseOptions);
 
 /**
