@@ -14,8 +14,7 @@ console.log("BST Logless server v" + Utils.version());
  * Server setup
  */
 
-let serverConfig = ServerConfig.create();
-let configError = serverConfig.initialize("./config.properties");
+let configError = ServerConfig.initialize("./config.properties");
 if (configError) {
     console.error("Configurator ha a problem: " + configError.message);
     process.exit(2);
@@ -51,7 +50,7 @@ let swaggerDefinition = {
         version: "1.0.0",
         description: "RESTful API to store and retrieve logs",
     },
-    host: serverConfig.swagger_url,
+    host: ServerConfig.swagger_url,
     basePath: "/v1"
 };
 
@@ -69,7 +68,7 @@ let swaggerSpec = swaggerJSDoc(options);
  * Connect Mongoos
  */
 
-mongoose.connect(serverConfig.mongo_url);
+mongoose.connect(ServerConfig.mongo_url);
 
 /**
  * Routes
@@ -102,6 +101,6 @@ app.get("/", function (req, res) {
  * Fire up the server
  */
 
-let _server = app.listen(parseInt(serverConfig.server_port), function () {
-    console.log("The BST logger server listening on port " + serverConfig.server_port);
+let _server = app.listen(parseInt(ServerConfig.server_port), function () {
+    console.log("The BST logger server listening on port " + ServerConfig.server_port);
 });

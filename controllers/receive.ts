@@ -4,6 +4,7 @@
 
 import Log = require("../lib/log");
 import async = require("async");
+import {ServerConfig} from "../lib/server-config";
 
 /**
  * @swagger
@@ -42,22 +43,28 @@ export default function (req, res) {
         logs.push(log);
     }
 
-    async.mapLimit(logs, 100, function(l1, callback) {
-        let newLog = new Log(l1);
-        newLog.save((err) => {
-            if (err)
-                return callback(err, l1);
-
-            callback(null, l1);
-        });
-    }, function(err, results) {
-        if (err) {
-            console.error({info: "Error during log entry create", error: err});
-        }
-        // else {
-        //     console.log({info: results.length + " inserted"});
-        // }
-    });
+    // async.mapLimit(logs, 10, function(l1, callback) {
+    //     if (ServerConfig.debug_mode) {
+    //         console.log(l1);
+    //     }
+    //
+    //     let newLog = new Log(l1);
+    //     newLog.save((err) => {
+    //         if (err)
+    //             return callback(err, l1);
+    //
+    //         callback(null, l1);
+    //     });
+    // }, function(err, results) {
+    //     if (err) {
+    //         console.error({info: "Error during log entry create", source: batch.source, tx: batch.transaction_id, error: err});
+    //     }
+    //     else {
+    //         if (ServerConfig.debug_mode) {
+    //             console.log({info: results.length + " logs inserted", source: batch.source, tx: batch.transaction_id});
+    //         }
+    //      }
+    // });
 
     res.json({logs: logs.length});
 };

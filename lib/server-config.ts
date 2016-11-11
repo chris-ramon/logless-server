@@ -5,16 +5,12 @@
 let PropertiesReader = require("properties-reader");
 
 export class ServerConfig {
-    public server_port: string;
-    public mongo_url: string;
-    public swagger_url: string;
+    public static server_port: string;
+    public static mongo_url: string;
+    public static swagger_url: string;
+    public static debug_mode: boolean = false;
 
-    public static create(): ServerConfig {
-        let instance: ServerConfig = new ServerConfig();
-        return instance;
-    }
-
-    public initialize(configFile: string): Error {
+    public static initialize(configFile: string): Error {
         let props: any = null;
 
         try {
@@ -25,19 +21,21 @@ export class ServerConfig {
 
         let env = process.argv[2] || process.env.env || "default";
 
-        this.server_port = props.get(env + ".server_port") || props.get("default.server_port");
-        this.swagger_url = props.get(env + ".swagger_url") || props.get("default.swagger_url");
+        ServerConfig.server_port = props.get(env + ".server_port") || props.get("default.server_port");
+        ServerConfig.swagger_url = props.get(env + ".swagger_url") || props.get("default.swagger_url");
+        ServerConfig.debug_mode = props.get(env + ".debug_mode");
 
-        this.mongo_url = process.env.BST_MONGO_URL || props.get(env + ".mongo_url") || props.get("default.mongo_url");
+        ServerConfig.mongo_url = process.env.BST_MONGO_URL || props.get(env + ".mongo_url") || props.get("default.mongo_url");
 
-        if (!this.mongo_url) {
+        if (!ServerConfig.mongo_url) {
             return new Error("Mongo db url is not set. Use the BST_MONGO_URL shell environment variable!");
         }
 
         console.log("Server environment: " + env);
-        console.log("Port: " + this.server_port);
-        console.log("Mongo Url: " + this.mongo_url);
-        console.log("Swagger Url: " + this.swagger_url);
+        console.log("Port: " + ServerConfig.server_port);
+        console.log("Mongo Url: " + ServerConfig.mongo_url);
+        console.log("Swagger Url: " + ServerConfig.swagger_url);
+        console.log("Debug mode: " + ServerConfig.debug_mode);
 
         return null;
     }
