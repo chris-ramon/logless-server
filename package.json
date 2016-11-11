@@ -1,6 +1,6 @@
 {
   "name": "bst-logging-server",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "BST Logging REST Services",
   "license": "ISC",
   "private": false,
