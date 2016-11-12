@@ -43,7 +43,13 @@ export default function (req, res) {
         logs.push(log);
     }
 
+    if (ServerConfig.debug_mode) {
+        console.time("receive-" + batch.source)
+    }
+
     Log.insertMany(logs, onInsert);
+
+    // I leave this here. There isn't mush difference in time, at least in case of a few logs at a time (not bulk load).
 
     // async.mapLimit(logs, 10, function(l1, callback) {
     //     if (ServerConfig.debug_mode) {
@@ -66,6 +72,7 @@ export default function (req, res) {
         else {
             if (ServerConfig.debug_mode) {
                 console.log({info: logs.length + " logs inserted", source: batch.source, tx: batch.transaction_id});
+                console.timeEnd("receive-" + batch.source)
             }
         }
     }

@@ -45,6 +45,9 @@ let logSchema = new mongoose.Schema({
         enum: ["VERBOSE", "DEBUG", "INFO", "WARN", "ERROR"],
         required: [true, "Log type is missing"]
     }
+}, {
+    // Turn-off auto indexing, we manually need to trigger indexing
+    autoIndex : false
 });
 
 logSchema.set("toJSON", {

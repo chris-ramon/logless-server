@@ -3,6 +3,7 @@
  */
 
 import Log = require("../lib/log");
+import {ServerConfig} from "../lib/server-config";
 
 /**
  * @swagger
@@ -82,11 +83,20 @@ export default function (req, res) {
         query.timestamp = {$gt: req.query.start_time};
     }
 
+    if (ServerConfig.debug_mode) {
+        console.time("query-" + req.query.source)
+    }
+
     Log.find(query, null, {sort: {timestamp: -1}}, (err, logs) => {
         if (err) {
             res.json({info: "Error during finding logs", error: err});
         } else {
             if (logs) {
+                if (ServerConfig.debug_mode) {
+                    console.timeEnd("query-" + req.query.source)
+                    console.log({info: logs.length + " logs queried", source: req.query.source});
+                }
+
                 res.json({data: logs});
             } else {
                 res.json({info: "Logs not found"});
