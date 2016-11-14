@@ -1,4 +1,5 @@
-# Create indexs
+# Delete logs (needs query. {} is all)
+db.logs.remove({});
 
 # Index for the source/time lookup
 db.logs.createIndex({'source': 1, 'timestamp': -1});

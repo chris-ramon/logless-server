@@ -94,7 +94,7 @@ export default function (req, res) {
             if (logs) {
                 if (ServerConfig.debug_mode) {
                     console.timeEnd("query-" + req.query.source)
-                    console.log({info: logs.length + " logs queried", source: req.query.source});
+                    console.log(JSON.stringify({info: logs.length + " logs queried", source: req.query.source}));
                 }
 
                 res.json({data: logs});

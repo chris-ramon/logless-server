@@ -71,7 +71,7 @@ export default function (req, res) {
         }
         else {
             if (ServerConfig.debug_mode) {
-                console.log({info: logs.length + " logs inserted", source: batch.source, tx: batch.transaction_id});
+                console.log(JSON.stringify({info: logs.length + " logs inserted", source: batch.source, tx: batch.transaction_id}));
                 console.timeEnd("receive-" + batch.source)
             }
         }
