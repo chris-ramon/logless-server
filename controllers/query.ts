@@ -73,21 +73,29 @@ import {ServerConfig} from "../lib/server-config";
 
 export default function (req, res) {
     let query = {
-        source: req.query.source,
-        timestamp: {}
+        source: req.query.source
     };
 
-    if (req.query.end_time) {
-        query.timestamp = {$gt: req.query.start_time, $lt: req.query.end_time};
-    } else {
-        query.timestamp = {$gt: req.query.start_time};
-    }
+    // if (req.query.end_time) {
+    //     query.timestamp = {$gt: req.query.start_time, $lt: req.query.end_time};
+    // } else {
+    //     query.timestamp = {$gt: req.query.start_time};
+    // }
 
     if (ServerConfig.debug_mode) {
-        console.time("query-" + req.query.source)
+        console.time("query-" + req.query.source);
     }
 
-    Log.find(query, null, {sort: {timestamp: -1}}, (err, logs) => {
+    let opt = {
+        sort: {timestamp: -1}
+    };
+
+    if (req.query.limit) {
+        let limit = parseInt(req.query.limit);
+        Object.assign(opt, {limit: limit});
+    }
+
+    Log.find(query, null, opt, (err, logs) => {
         if (err) {
             res.json({info: "Error during finding logs", error: err});
         } else {
