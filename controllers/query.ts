@@ -78,10 +78,14 @@ export default function (req, res) {
     };
 
     if (req.query.end_time) {
-        query.timestamp = {$gt: req.query.start_time, $lt: req.query.end_time};
+        Object.assign(query.timestamp, { $lt: req.query.end_time });
     } else {
-        query.timestamp = {$gt: req.query.start_time};
+        Object.assign(query.timestamp, { $lt: new Date().toISOString() });
     }
+
+    if (req.query.start_time) {
+        Object.assign(query.timestamp, { $gt: req.query.start_time });
+    } // no default
 
     if (ServerConfig.debug_mode) {
         console.time("query-" + req.query.source);
@@ -95,6 +99,9 @@ export default function (req, res) {
         let limit = parseInt(req.query.limit);
         Object.assign(opt, {limit: limit});
     }
+
+    console.log(req.query);
+    console.log(query);
 
     Log.find(query, null, opt, (err, logs) => {
         if (err) {
