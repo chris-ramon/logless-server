@@ -84,16 +84,25 @@ export default function (req, res) {
     }
 
     if (ServerConfig.debug_mode) {
-        console.time("query-" + req.query.source)
+        console.time("query-" + req.query.source);
     }
 
-    Log.find(query, null, {sort: {timestamp: -1}}, (err, logs) => {
+    let opt = {
+        sort: {timestamp: -1}
+    };
+
+    if (req.query.limit) {
+        let limit = parseInt(req.query.limit);
+        Object.assign(opt, {limit: limit});
+    }
+
+    Log.find(query, null, opt, (err, logs) => {
         if (err) {
             res.json({info: "Error during finding logs", error: err});
         } else {
             if (logs) {
                 if (ServerConfig.debug_mode) {
-                    console.timeEnd("query-" + req.query.source)
+                    console.timeEnd("query-" + req.query.source);
                     console.log(JSON.stringify({info: logs.length + " logs queried", source: req.query.source}));
                 }
 
