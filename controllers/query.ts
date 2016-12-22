@@ -73,14 +73,15 @@ import {ServerConfig} from "../lib/server-config";
 
 export default function (req, res) {
     let query = {
-        source: req.query.source
+        source: req.query.source,
+        timestamp: {}
     };
 
-    // if (req.query.end_time) {
-    //     query.timestamp = {$gt: req.query.start_time, $lt: req.query.end_time};
-    // } else {
-    //     query.timestamp = {$gt: req.query.start_time};
-    // }
+    if (req.query.end_time) {
+        query.timestamp = {$gt: req.query.start_time, $lt: req.query.end_time};
+    } else {
+        query.timestamp = {$gt: req.query.start_time};
+    }
 
     if (ServerConfig.debug_mode) {
         console.time("query-" + req.query.source);
@@ -101,7 +102,7 @@ export default function (req, res) {
         } else {
             if (logs) {
                 if (ServerConfig.debug_mode) {
-                    console.timeEnd("query-" + req.query.source)
+                    console.timeEnd("query-" + req.query.source);
                     console.log(JSON.stringify({info: logs.length + " logs queried", source: req.query.source}));
                 }
 
