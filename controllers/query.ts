@@ -83,6 +83,10 @@ export default function (req, res) {
         Object.assign(query.timestamp, { $lt: new Date().toISOString() });
     }
 
+    if (req.query.logtype) {
+        Object.assign(query, { log_type: req.query.logtype });
+    }
+
     if (req.query.start_time) {
         Object.assign(query.timestamp, { $gt: req.query.start_time });
     } // no default
