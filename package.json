@@ -16,6 +16,7 @@
     "coverage": "typings install && tsc && istanbul cover _mocha test/**/*-test.js -- -R spec && remap-istanbul -i ./coverage/coverage.json -o ./coverage/ts-report -t html && ./node_modules/.bin/remap-istanbul -i coverage/coverage.json -t lcovonly > coverage/lcov-ts.info",
     "coveralls": "npm run coverage && coveralls < coverage/lcov-ts.info",
     "test": "mocha test/**/*-test.js",
+    "preinstall": "typings install",
     "prestart": "tsc",
     "start-database": "mongod",
     "start": "node bin/bst-logging-server.js"
@@ -27,6 +28,7 @@
     "bluebird": "^3.4.6",
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
+    "moment": "^2.15.2",
     "mongoose": "^4.6.7",
     "properties-reader": "0.0.15",
     "swagger-jsdoc": "^1.3.0",
