@@ -1,7 +1,6 @@
 "use strict";
 
 const NUM = 10000;
-const SOURCEE = "happy_eintein";
 
 const entries = createLogs(NUM);
 

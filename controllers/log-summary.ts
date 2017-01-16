@@ -1,10 +1,10 @@
 /**
  * Created by chrsdietz on 01/16/16.
  */
-import { DocumentQuery } from "mongoose";
 import { Request, Response } from "express";
 
 import Log, { ILog } from "../lib/log";
+import { getTimeSummary, TimeSummary } from "../lib/time-bucket";
 import Console from "../lib/console-utils";
 
 export interface TimeBucket {
@@ -13,38 +13,36 @@ export interface TimeBucket {
 }
 
 export default function (req: Request, res: Response) {
+    const reqQuer = Object.assign({}, req.query);
 
-    Console.log("Getting log summary.");
-    const remoteQuery = Object.assign({}, req.query);
+    const query: any = {};
 
-    const sourceName = remoteQuery.source;
-    if (errorIfUndefined(sourceName, "Source name must be defined.", res)) {
-        return;
+    let timestamp: any = undefined;
+
+    if (reqQuer.start_time) {
+        timestamp = {};
+        Object.assign(timestamp, { $gt: reqQuer.start_time });
     }
 
-    const startTime = remoteQuery.start_time;
-    if (errorIfUndefined(startTime, "Start time must be defined.", res)) {
-        return;
+    if (reqQuer.end_time) {
+        timestamp = (timestamp) ? timestamp : {};
+        Object.assign(timestamp, { $lt: reqQuer.end_time });
     }
 
-    const endTime = remoteQuery.end_time;
-    if (errorIfUndefined(endTime, "End time must be defined.", res)) {
-        return;
+    if (timestamp) {
+        Object.assign(query, { timestamp: timestamp });
     }
 
-    const query: any = {
-        source: remoteQuery.source
-    };
-
-    // Object.assign(query, { timestamp: { $gt: req.query.start_time }});
-    // Object.assign(query.timestamp, { $lt: req.query.end_time });
+    if (reqQuer.source) {
+        Object.assign(query, { source: reqQuer.source });
+    }
 
     let opt = {
         sort: { timestamp: -1 }
     };
 
     Console.log("Querying for summery");
-    console.log(query);
+    Console.log(query);
 
     Log.find(query, null, opt)
         .then(function (logs: any[]) {
@@ -57,7 +55,8 @@ export default function (req: Request, res: Response) {
 
 function createSummary(logs: ILog[], response: Response) {
     Console.info("Creating summary. " + logs.length);
-    response.status(200).json(logs);
+    const timeSummary: TimeSummary = getTimeSummary(logs);
+    response.status(200).json(timeSummary);
 }
 
 function errorOut(error: Error, response: Response) {

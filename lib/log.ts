@@ -3,10 +3,11 @@
  */
 
 import * as mongoose from "mongoose";
+import { Timestamped } from "./time-bucket";
 
 export enum LogType {VERBOSE, DEBUG, INFO, WARN, ERROR};
 
-export interface ILog {
+export interface ILog extends Timestamped {
     source: string;
     transaction_id: string;
     payload: string;
