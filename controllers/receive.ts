@@ -2,7 +2,7 @@
  * Created by bvizy on 10/26/16.
  */
 
-import Log = require("../lib/log");
+import Log from "../lib/log";
 import async = require("async");
 import {ServerConfig} from "../lib/server-config";
 

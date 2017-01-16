@@ -23,7 +23,7 @@ export class ServerConfig {
 
         ServerConfig.server_port = props.get(env + ".server_port") || props.get("default.server_port");
         ServerConfig.swagger_url = props.get(env + ".swagger_url") || props.get("default.swagger_url");
-        ServerConfig.debug_mode = props.get(env + ".debug_mode") || true;
+        ServerConfig.debug_mode = props.get(env + ".debug_mode") || false;
 
         ServerConfig.mongo_url = process.env.BST_MONGO_URL || props.get(env + ".mongo_url") || props.get("default.mongo_url");
 

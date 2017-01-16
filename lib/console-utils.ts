@@ -15,7 +15,7 @@ export namespace Console {
 
     export function error(message?: string, ...optionalParams: any[]): void {
         if (ServerConfig.debug_mode) {
-            console.error(message, optionalParams)
+            console.error(message, optionalParams);
         }
     }
 }

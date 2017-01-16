@@ -4,9 +4,9 @@
 
 import * as mongoose from "mongoose";
 
-enum LogType {VERBOSE, DEBUG, INFO, WARN, ERROR};
+export enum LogType {VERBOSE, DEBUG, INFO, WARN, ERROR};
 
-interface ILog {
+export interface ILog {
     source: string;
     transaction_id: string;
     payload: string;
@@ -60,4 +60,4 @@ logSchema.set("toJSON", {
 
 let Log = mongoose.model("Log", logSchema);
 
-export = Log;
+export default Log;

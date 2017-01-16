@@ -3,7 +3,7 @@
  */
 import { Request, Response } from "express";
 
-import Log = require("../lib/log");
+import Log from "../lib/log";
 import Console from "../lib/console-utils";
 
 export default function(req: Request, res: Response) {
