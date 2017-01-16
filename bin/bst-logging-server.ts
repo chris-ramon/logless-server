@@ -4,6 +4,7 @@ import {ServerConfig} from "../lib/server-config";
 import receive from "../controllers/receive";
 import query from "../controllers/query";
 import source from "../controllers/source";
+import summary from "../controllers/log-summary";
 import {Utils} from "../lib/utils";
 
 let mongoose = require("mongoose");
@@ -95,6 +96,9 @@ app.get("/v1/query", query);
 
 /* Source */
 app.get("/v1/source", source);
+
+/* Summary */
+app.get("/v1/logSummary", summary);
 
 /* All */
 // app.get("/v1/log", allLogs);
