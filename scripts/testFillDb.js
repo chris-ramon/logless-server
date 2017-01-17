@@ -80,16 +80,19 @@ function generateResponsePayload() {
             ]
         }
     }
+    return payload;
 }
 
 function generateRequestPayload() {
+    const number = getRandomInt(0, intents.length);
+    const requestType = intents[number];
     const payload = {
         version: "1.0",
         request: {
+            type: requestType,
             local: "en-US",
             requestId: guid(),
-            timestamp: new Date(),
-            type: intents[Math.random() % intents.length]
+            timestamp: new Date()
         },
         session: {
             attributes: {
@@ -146,4 +149,10 @@ function guid() {
   }
   return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
     s4() + '-' + s4() + s4() + s4();
+}
+
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min)) + min;
 }
