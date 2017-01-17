@@ -17,10 +17,8 @@ export function counter(supplier: NameSupplier): CountResult {
     const map: { [timestamp: string]: Count } = {};
 
     const length = supplier.length();
-    console.info("Length " + length);
     for (let i = 0; i < length; ++i) {
         const name = supplier.name(i);
-        console.info("name " + name);
         if (name) {
             let count: Count = map[name];
             if (!count) {
