@@ -3,6 +3,8 @@
  */
 import { Request, Response } from "express";
 
+import { getDateRange } from "./query-utils";
+
 import Log, { ILog } from "../lib/log";
 import { getTimeSummary, TimeSummary } from "../lib/time-bucket";
 import Console from "../lib/console-utils";
@@ -12,21 +14,7 @@ export default function (req: Request, res: Response) {
 
     const query: any = {};
 
-    let timestamp: any = undefined;
-
-    if (reqQuer.start_time) {
-        timestamp = {};
-        Object.assign(timestamp, { $gt: reqQuer.start_time });
-    }
-
-    if (reqQuer.end_time) {
-        timestamp = (timestamp) ? timestamp : {};
-        Object.assign(timestamp, { $lt: reqQuer.end_time });
-    }
-
-    if (timestamp) {
-        Object.assign(query, { timestamp: timestamp });
-    }
+    getDateRange(req, query);
 
     if (reqQuer.source) {
         Object.assign(query, { source: reqQuer.source });
@@ -35,4 +23,40 @@ export default function (req: Request, res: Response) {
     let opt = {
         sort: { timestamp: -1 }
     };
+
+    Console.log("Querying for summery");
+    Console.log(query);
+
+    Log.find(query, null, opt)
+        .then(function (logs: any[]) {
+            createSummary(logs, res);
+        })
+        .catch(function (err: Error) {
+            errorOut(err, res);
+        });
+}
+
+function createSummary(logs: ILog[], response: Response) {
+    Console.info("Creating summary. " + logs.length);
+    const map: { [timestamp: string]: number } = {};
+    for (let log of logs) {
+        const payload = log.payload;
+        const payloadObj = JSON.parse(payload);
+        console.log(payloadObj);
+
+        if (payloadObj.intent) {
+            const intent: string = payloadObj.intent;
+            if (!map[intent]) {
+                map[intent] = 0;
+            }
+            ++map[intent];
+        }
+    }
+
+    response.status(200).json(map);
+}
+
+function errorOut(error: Error, response: Response) {
+    Console.info("Error getting logs summary: " + error.message);
+    response.status(400).send(error.message);
 }
