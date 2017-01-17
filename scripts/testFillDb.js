@@ -60,7 +60,7 @@ function createEntry(index, currentTimestamp, getDate) {
         payload: payload,
         log_type: type,
         tags: [payloadType, "tag" + index, "tag" + index + 1],
-        timestamp: newStamp.toISOString()
+        timestamp: newStamp
     };
 }
 

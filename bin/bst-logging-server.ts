@@ -99,7 +99,7 @@ app.get("/v1/query", query);
 app.get("/v1/source", source);
 
 /* Time Summary */
-app.get("/v1/logSummary", timeSummary);
+app.get("/v1/timeSummary", timeSummary);
 
 /* Intent Count */
 app.get("/v1/intentCount", intentSummary);
