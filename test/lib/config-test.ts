@@ -9,11 +9,7 @@ describe("ServerConfig", function () {
 
     afterEach(function () {
     });
-
-    it ("failed", function() {
-        assert.ok(new Error("WOOO"), "Failed.");
-    });
-
+    
     it("screams for missing config file", function () {
         let error = ServerConfig.initialize("./foo3456.properties");
         if (error) {
