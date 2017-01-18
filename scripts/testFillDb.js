@@ -24,13 +24,15 @@ db.logs.insert(entries);
 
 function createLogs(numOfEntries) {
     let logEntries = [];
-    const timestamp = new Date(2017, 0, 15);
+    let year = 2017;
+    let month = 0;
+    let day = 15;
     for (let i = 0; i < numOfEntries; ++i) {
         const nextEntry = createEntry(i, () => {
-            if (i > 0 && i % 10 === 0) {
-                timestamp.setDate(timestamp.getDate() - 1);
+            if (i > 0 && i % 100 === 0) {
+                --day;
             }
-            return timestamp;
+            return new Date(year, month, day);
         });
 
         logEntries.push(nextEntry);
