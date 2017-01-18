@@ -25,11 +25,19 @@ export default function (req: Request, res: Response) {
         Object.assign(query, { source: reqQuer.source });
     }
 
-    let sort = (reqQuer.date_sort === "asc") ? 1 : -1;
+    let opt = undefined;
+    if (reqQuer.date_sort) {
+        let sort = undefined;
+        if (reqQuer.date_sort === "asc") {
+            sort = 1;
+        } else if (reqQuer.date_sort === "desc") {
+            sort = -1;
+        }
 
-    let opt = {
-        sort: { timestamp: sort }
-    };
+        opt = {
+            sort: { timestamp: sort }
+        };
+    }
 
     Console.log("Querying for time summary");
     Console.log(query);
