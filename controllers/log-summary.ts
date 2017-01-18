@@ -29,7 +29,7 @@ export default function (req: Request, res: Response) {
         sort: { timestamp: -1 }
     };
 
-    Console.log("Querying for summery");
+    Console.log("Querying for time summary");
     Console.log(query);
 
     Log.find(query, null, opt)
@@ -50,13 +50,4 @@ function createSummary(logs: ILog[], response: Response) {
 function errorOut(error: Error, response: Response) {
     Console.info("Error getting logs summary: " + error.message);
     response.status(400).send(error.message);
-}
-
-function errorIfUndefined(object: any, msg: string, response: Response): boolean {
-    if (!object) {
-        Console.info("Error getting logs summary: " + msg);
-        response.status(400).send(msg);
-        return true;
-    }
-    return false;
 }
