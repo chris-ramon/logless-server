@@ -1,6 +1,6 @@
 - name: Test
   service: app
-  command: npm install && npm test
+  command: npm run codeship
   encrypted_dockercfg_path: dockercfg.encrypted
 
 #- name: DockerHub push

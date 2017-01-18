@@ -19,7 +19,8 @@
     "preinstall": "typings install",
     "prestart": "tsc",
     "start-database": "mongod",
-    "start": "node bin/bst-logging-server.js"
+    "start": "node bin/bst-logging-server.js",
+    "codeship": "npm install && npm test"
   },
   "author": "OpenDog",
   "dependencies": {
