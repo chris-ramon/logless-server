@@ -24,10 +24,10 @@ db.logs.insert(entries);
 
 function createLogs(numOfEntries) {
     let logEntries = [];
-    const timestamp = new Date();
+    const timestamp = new Date(2017, 0, 15);
     for (let i = 0; i < numOfEntries; ++i) {
-        const nextEntry = createEntry(i, timestamp, () => {
-            if (i % 10 === 0) {
+        const nextEntry = createEntry(i, () => {
+            if (i > 0 && i % 10 === 0) {
                 timestamp.setDate(timestamp.getDate() - 1);
             }
             return timestamp;
@@ -38,7 +38,7 @@ function createLogs(numOfEntries) {
     return logEntries;
 }
 
-function createEntry(index, currentTimestamp, getDate) {
+function createEntry(index, getDate) {
     let type;
     switch (index % 3) {
         case 0:
@@ -87,7 +87,7 @@ function generateRequestPayload() {
     const number = getRandomInt(0, intents.length);
     const requestType = intents[number];
     const payload = {
-        version: "1.0",
+        version: "1.0", 
         request: {
             type: requestType,
             local: "en-US",
@@ -119,7 +119,7 @@ function generateRequestPayload() {
         }
     }
 
-    return JSON.stringify(payload);
+    return payload;
 }
 
 function generateName(index) {

@@ -80,7 +80,7 @@ export default function (req, res) {
     if (req.query.end_time) {
         Object.assign(query.timestamp, { $lt: req.query.end_time });
     } else {
-        Object.assign(query.timestamp, { $lt: new Date().toISOString() });
+        Object.assign(query.timestamp, { $lt: new Date() });
     }
 
     if (req.query.logtype) {
