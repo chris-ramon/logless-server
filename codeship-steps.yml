@@ -1,3 +1,8 @@
+- name: Intall Typings
+  service: app
+  command: typings install
+  encrypted_dockercfg_path: dockercfg.encrypted
+
 - name: Install
   service: app
   command: npm install
