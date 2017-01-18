@@ -1,7 +1,13 @@
 - name: Test
   service: app
-  command: npm run codeship
   encrypted_dockercfg_path: dockercfg.encrypted
+  steps: 
+  - type: serial
+    steps:
+    - service: install
+      command: npm install
+    - service: test
+      command: npm test 
 
 #- name: DockerHub push
 #  type: push
