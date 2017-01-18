@@ -10,7 +10,7 @@ export enum LogType {VERBOSE, DEBUG, INFO, WARN, ERROR};
 export interface ILog extends Timestamped {
     source: string;
     transaction_id: string;
-    payload: string;
+    payload: any;
     tags: string[];
     timestamp: Date;
     log_type: LogType;

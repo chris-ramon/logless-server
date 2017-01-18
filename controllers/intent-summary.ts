@@ -21,20 +21,18 @@ export default function (req: Request, res: Response) {
         Object.assign(query, { source: reqQuer.source });
     }
 
-    let opt = {
-        sort: { timestamp: -1 }
-    };
+    Object.assign(query, { "payload.request": { $exists: true } });
 
-    Console.log("Querying for intent count summery");
+    Console.log("Querying for intent count summary");
     Console.log(query);
 
-    Log.find(query, null, opt)
+    Log.find(query)
         .then(function (logs: any[]) {
             return createSummary(logs);
-        }).then(function(result: CountResult) {
+        }).then(function (result: CountResult) {
             return sort(result);
         })
-        .then(function(result: CountResult) {
+        .then(function (result: CountResult) {
             sendResult(res, result);
         })
         .catch(function (err: Error) {
@@ -43,25 +41,19 @@ export default function (req: Request, res: Response) {
 }
 
 function createSummary(logs: ILog[]): CountResult {
-    Console.info("Creating intent count summary. " + logs.length);
     return counter({
         length() {
             return logs.length;
         },
         name(index: number) {
             const payload = logs[index].payload;
-            const payloadObj: any = parseJson(payload);
-            if (payloadObj) {
-                if (payloadObj.request) {
-                    return payloadObj.request.type;
-                }
-            }
+            return payload.request.type;
         }
     });
 }
 
 function sort(result: CountResult): CountResult {
-    result.count.sort(function(a: Count, b: Count): number {
+    result.count.sort(function (a: Count, b: Count): number {
         return b.count - a.count;
     });
     return result;
@@ -74,12 +66,4 @@ function sendResult(response: Response, result: CountResult) {
 function errorOut(error: Error, response: Response) {
     Console.info("Error getting logs summary: " + error.message);
     response.status(400).send(error.message);
-}
-
-function parseJson(obj: string) {
-    try {
-        return JSON.parse(obj);
-    } catch (err) {
-        return undefined;
-    }
 }
