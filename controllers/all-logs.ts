@@ -3,7 +3,7 @@
  */
 
 /* Read all */
-import Log = require("../lib/log");
+import Log from "../lib/log";
 
 export default function (req, res) {
     Log.find({}, null, {sort: {timestamp: -1}}, (err, logs) => {

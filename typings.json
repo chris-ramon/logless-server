@@ -2,10 +2,12 @@
   "globalDependencies": {
     "async": "registry:dt/async#2.0.1+20160804113311",
     "body-parser": "registry:dt/body-parser#0.0.0+20160619023215",
+    "chai": "registry:dt/chai#3.4.0+20160926213833",
     "express": "registry:dt/express#4.0.0+20160317120654",
     "express-serve-static-core": "registry:dt/express-serve-static-core#0.0.0+20160617060422",
     "mocha": "registry:dt/mocha#2.2.5+20160619032855",
     "mockery": "registry:dt/mockery#1.4.0+20160316155526",
+    "moment": "registry:dt/moment#2.11.1+20161010105546",
     "mongoose": "registry:dt/mongoose#4.5.9+20161010180758",
     "node": "registry:dt/node#6.0.0+20160621231320",
     "serve-static": "registry:dt/serve-static#0.0.0+20160606155157",

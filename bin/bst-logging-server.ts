@@ -4,6 +4,8 @@ import {ServerConfig} from "../lib/server-config";
 import receive from "../controllers/receive";
 import query from "../controllers/query";
 import source from "../controllers/source";
+import timeSummary from "../controllers/log-summary";
+import intentSummary from "../controllers/intent-summary";
 import {Utils} from "../lib/utils";
 
 let mongoose = require("mongoose");
@@ -95,6 +97,12 @@ app.get("/v1/query", query);
 
 /* Source */
 app.get("/v1/source", source);
+
+/* Time Summary */
+app.get("/v1/timeSummary", timeSummary);
+
+/* Intent Count */
+app.get("/v1/intentCount", intentSummary);
 
 /* All */
 // app.get("/v1/log", allLogs);

@@ -40,3 +40,5 @@ export class ServerConfig {
         return null;
     }
 }
+
+export default ServerConfig;

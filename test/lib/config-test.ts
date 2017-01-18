@@ -1,6 +1,6 @@
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
-import {ServerConfig} from "../lib/server-config";
+import {ServerConfig} from "../../lib/server-config";
 import * as assert from "assert";
 
 describe("ServerConfig", function () {
@@ -9,7 +9,7 @@ describe("ServerConfig", function () {
 
     afterEach(function () {
     });
-
+    
     it("screams for missing config file", function () {
         let error = ServerConfig.initialize("./foo3456.properties");
         if (error) {

@@ -3,13 +3,14 @@
  */
 
 import * as mongoose from "mongoose";
+import { Timestamped } from "./time-bucket";
 
-enum LogType {VERBOSE, DEBUG, INFO, WARN, ERROR};
+export enum LogType {VERBOSE, DEBUG, INFO, WARN, ERROR};
 
-interface ILog {
+export interface ILog extends Timestamped {
     source: string;
     transaction_id: string;
-    payload: string;
+    payload: any;
     tags: string[];
     timestamp: Date;
     log_type: LogType;
@@ -60,4 +61,4 @@ logSchema.set("toJSON", {
 
 let Log = mongoose.model("Log", logSchema);
 
-export = Log;
+export default Log;
