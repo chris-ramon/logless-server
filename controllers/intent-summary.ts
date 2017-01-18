@@ -30,7 +30,7 @@ export default function (req: Request, res: Response) {
         .then(function (logs: any[]) {
             return createSummary(logs);
         }).then(function (result: CountResult) {
-            return sort(result);
+            return sort(result, reqQuer.count_sort);
         })
         .then(function (result: CountResult) {
             sendResult(res, result);
@@ -52,10 +52,16 @@ function createSummary(logs: ILog[]): CountResult {
     });
 }
 
-function sort(result: CountResult): CountResult {
-    result.count.sort(function (a: Count, b: Count): number {
-        return b.count - a.count;
-    });
+function sort(result: CountResult, direction: string): CountResult {
+    if (direction === "desc") {
+        result.count.sort(function (a: Count, b: Count): number {
+            return b.count - a.count;
+        });
+    } else if (direction === "asc") {
+        result.count.sort(function (a: Count, b: Count): number {
+            return a.count - b.count;
+        });
+    }
     return result;
 }
 
