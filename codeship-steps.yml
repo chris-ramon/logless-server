@@ -1,6 +1,6 @@
 - name: Test
   service: app
-  command: npm test
+  command: npm install && npm test
   encrypted_dockercfg_path: dockercfg.encrypted
 
 #- name: DockerHub push
