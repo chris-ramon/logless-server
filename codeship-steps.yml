@@ -1,18 +1,3 @@
-- name: Intall Typings
-  service: app
-  command: npm install typings
-  encrypted_dockercfg_path: dockercfg.encrypted
-
-- name: Install
-  service: app
-  command: npm install
-  encrypted_dockercfg_path: dockercfg.encrypted
-
-- name: Typings install
-  service: app
-  command: typings install
-  encrypted_dockercfg_path: dockercfg.encrypted
-
 - name: Test
   service: app
   command: npm test
