@@ -17,9 +17,9 @@
     "coveralls": "npm run coverage && coveralls < coverage/lcov-ts.info",
     "test": "mocha test/**/*-test.js",
     "prestart": "tsc",
+    "postinstall": "typings install",
     "start-database": "mongod",
-    "start": "node bin/bst-logging-server.js",
-    "codeship": "npm install && npm test"
+    "start": "node bin/bst-logging-server.js"
   },
   "author": "OpenDog",
   "dependencies": {
