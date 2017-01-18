@@ -12,5 +12,9 @@ WORKDIR /opt/logless-server
 
 RUN npm install
 
+RUN node ./node_modules/typings/dist/bin.js install
+
+RUN ./node_modules/typescript/bin/tsc -p .
+
 CMD [ "npm", "start" ]
 
