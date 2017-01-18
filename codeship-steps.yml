@@ -1,13 +1,12 @@
+- name: Install
+  service: app
+  command: npm install
+  encrypted_dockercfg_path: dockercfg.encrypted
+
 - name: Test
   service: app
+  command: npm test
   encrypted_dockercfg_path: dockercfg.encrypted
-  steps: 
-  - type: serial
-    steps:
-    - service: install
-      command: npm install
-    - service: test
-      command: npm test 
 
 #- name: DockerHub push
 #  type: push
