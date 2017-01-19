@@ -39,35 +39,28 @@ export interface TimeBucket {
  *         description: The end period to get logs from (ISO format)
  *         required: false
  *         type: string
+ *       - name: date_sort
+ *          in: query
+ *          description: The order in which the date buckets should be sorted. Can be "asc" or "desc".
+ *          required: false
+ *          type: string
  *     responses:
  *       200:
  *         description: Successful response
  *         schema:
- *           title: ArrayOfTiemBuckets
+ *           title: ArrayOfTimeeBuckets
  *           type: object
  *           properties:
- *             logs:
+ *             buckets:
  *               type: array
  *               items:
- *                 title: Log
+ *                 title: TimeSummary
  *                 type: object
  *                 properties:
- *                   payload:
+ *                   date:
  *                     type: string
- *                   source:
- *                     type: string
- *                   tags:
- *                     type: array
- *                     items:
- *                       type: string
- *                   transaction_id:
- *                     type: string
- *                   timestamp:
- *                     type: string
- *                   log_type:
- *                     type: string
- *                   id:
- *                     type: string
+ *                   count:
+ *                     type: number
  *       4xx:
  *         description: Error message
  *         schema:
