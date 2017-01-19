@@ -71,5 +71,55 @@ describe("Log time summary", function () {
                 });
             });
         });
+
+        describe("Tests the queries are properly set.", function() {
+            it("Tests the source query", function() {
+                mockRequest.query = { source: "ABC123" };
+
+                return logSummary(mockRequest, mockResponse).then(function(logs: ILog[]) {
+                    expect(logFind).to.be.calledWith({ source: "ABC123" });
+                });
+            });
+
+            it ("Tests the start time query", function() {
+                mockRequest.query = { start_time: today };
+
+                return logSummary(mockRequest, mockResponse).then(function(log: ILog[]) {
+                    expect(logFind).to.be.calledWith({ timestamp: { $gte: today } }, undefined, undefined);
+                });
+            });
+
+            it ("Tests the end time query", function() {
+                mockRequest.query = { end_time: today };
+
+                return logSummary(mockRequest, mockResponse).then(function(log: ILog[]) {
+                    expect(logFind).to.be.calledWith({ timestamp: { $lte: today } }, undefined, undefined);
+                });
+            });
+
+            it ("Tests the sort query with ascending", function() {
+                mockRequest.query = { date_sort: "asc" };
+
+                return logSummary(mockRequest, mockResponse).then(function(logs: ILog[]) {
+                    expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: 1 }});
+                });
+            });
+
+            it ("Tests the sort query descending", function() {
+                mockRequest.query = { date_sort: "desc" };
+
+                return logSummary(mockRequest, mockResponse).then(function(logs: ILog[]) {
+                    expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: -1 }});
+                });
+            });
+
+            it ("Tests the sort query is ignored with invalid entry.", function() {
+                mockRequest.query = { date_sort: "noop" };
+
+                return logSummary(mockRequest, mockResponse).then(function(logs: ILog[]) {
+                    expect(logFind).to.be.calledWithExactly({}, undefined, undefined);
+                });
+            });
+        });
     });
 });

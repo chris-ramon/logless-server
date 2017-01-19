@@ -34,15 +34,17 @@ export default function (req: Request, res: Response): Promise<ILog[]> {
             sort = -1;
         }
 
-        opt = {
-            sort: { timestamp: sort }
-        };
+        if (sort) {
+            opt = {
+                sort: { timestamp: sort }
+            };
+        }
     }
 
     console.log("Querying for time summary");
     console.log(query);
 
-    return Log.find(query, undefined, undefined)
+    return Log.find(query, undefined, opt)
         .then(function (logs: any[]) {
             createSummary(logs, res);
             return logs;
