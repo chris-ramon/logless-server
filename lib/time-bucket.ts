@@ -23,7 +23,7 @@ export function getTimeSummary<T extends Timestamped>(items: T[], granularity: G
 
     for (let i = 0; i < items.length; ++i) {
         const itemDate: moment.Moment = moment(items[i].timestamp);
-        const nearestDay = itemDate.startOf("date");
+        const nearestDay = (granularity === Granularity.day) ? itemDate.startOf("date") : itemDate.startOf("hour");
 
         const key = nearestDay.toISOString();
         let timeBucket: TimeBucket = bucketMap[key];
