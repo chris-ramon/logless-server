@@ -14,6 +14,71 @@ export interface TimeBucket {
     count: number;
 }
 
+/**
+ * @swagger
+ * /timeSummary:
+ *   get:
+ *     tags:
+ *       - Query
+ *     description: Queries the log and returns a count summary of each log in specified time buckets
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: source
+ *         in: query
+ *         description: Log source id
+ *         required: false
+ *         type: string
+ *       - name: start_time
+ *         in: query
+ *         description: The start period to get logs from (ISO format)
+ *         required: false
+ *         type: string
+ *       - name: end_time
+ *         in: query
+ *         description: The end period to get logs from (ISO format)
+ *         required: false
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *         schema:
+ *           title: ArrayOfTiemBuckets
+ *           type: object
+ *           properties:
+ *             logs:
+ *               type: array
+ *               items:
+ *                 title: Log
+ *                 type: object
+ *                 properties:
+ *                   payload:
+ *                     type: string
+ *                   source:
+ *                     type: string
+ *                   tags:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   transaction_id:
+ *                     type: string
+ *                   timestamp:
+ *                     type: string
+ *                   log_type:
+ *                     type: string
+ *                   id:
+ *                     type: string
+ *       4xx:
+ *         description: Error message
+ *         schema:
+ *           title: Error
+ *           type: object
+ *           properties:
+ *             info:
+ *               type: string
+ *             error:
+ *               type: object
+ */
 export default function (req: Request, res: Response): Promise<TimeSummary> {
     const reqQuer = Object.assign({}, req.query);
 

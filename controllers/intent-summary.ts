@@ -10,6 +10,64 @@ import Console from "../lib/console-utils";
 
 import { counter, Count, CountResult } from "../lib/counter";
 
+/**
+ * @swagger
+ * /intentSummary:
+ *   get:
+ *     tags:
+ *       - Query
+ *     description: Queries the log and returns a count summary of each log intent
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: source
+ *         in: query
+ *         description: Log source id
+ *         required: false
+ *         type: string
+ *       - name: start_time
+ *         in: query
+ *         description: The start period to get logs from (ISO format)
+ *         required: false
+ *         type: string
+ *       - name: end_time
+ *         in: query
+ *         description: The end period to get logs from (ISO format)
+ *         required: false
+ *         type: string
+ *       - name: count_sort
+ *          in: query
+ *          description: The order in which the count buckets should be sorted. Can be "asc" or "desc".
+ *          required: false
+ *          type: string
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *         schema:
+ *           title: ArrayOfTimeeBuckets
+ *           type: object
+ *           properties:
+ *             count:
+ *               type: array
+ *               items:
+ *                 title: CountResult
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                   count:
+ *                     type: number
+ *       4xx:
+ *         description: Error message
+ *         schema:
+ *           title: Error
+ *           type: object
+ *           properties:
+ *             info:
+ *               type: string
+ *             error:
+ *               type: object
+ */
 export default function (req: Request, res: Response): Promise<CountResult> {
     const reqQuer = Object.assign({}, req.query);
 
