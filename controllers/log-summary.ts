@@ -14,7 +14,7 @@ export interface TimeBucket {
     count: number;
 }
 
-export default function (req: Request, res: Response): Promise<ILog[]> {
+export default function (req: Request, res: Response): Promise<TimeSummary> {
     const reqQuer = Object.assign({}, req.query);
 
     const query: any = {};
@@ -41,25 +41,24 @@ export default function (req: Request, res: Response): Promise<ILog[]> {
         }
     }
 
-    console.log("Querying for time summary");
-    console.log(query);
+    Console.log("Querying for time summary");
+    Console.log(query);
 
     return Log.find(query, undefined, opt)
         .then(function (logs: any[]) {
-            createSummary(logs, res);
-            return logs;
+            return createSummary(logs, res);
         })
         .catch(function (err: Error) {
             errorOut(err, res);
-            return [];
+            return { buckets: [] };
         });
 }
 
-function createSummary(logs: ILog[], response: Response) {
+function createSummary(logs: ILog[], response: Response): TimeSummary {
     Console.info("Creating summary. " + logs.length);
     const timeSummary: TimeSummary = getTimeSummary(logs);
-    console.log(timeSummary);
     response.status(200).json(timeSummary);
+    return timeSummary;
 }
 
 function errorOut(error: Error, response: Response) {

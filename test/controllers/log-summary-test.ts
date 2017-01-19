@@ -5,10 +5,13 @@ import * as SinonChai from "sinon-chai";
 import { Request, Response } from "express";
 
 import Log, { ILog } from "../../lib/log";
+import { TimeSummary } from "../../lib/time-bucket";
+
 
 import * as Utils from "../utils";
 
 import logSummary from "../../controllers/log-summary";
+
 
 Chai.use(SinonChai);
 const expect = Chai.expect;
@@ -58,11 +61,12 @@ describe("Log time summary", function () {
             const startOfToday = new Date(today.toISOString());
             startOfToday.setHours(0, 0, 0, 0);
 
-            return logSummary(mockRequest, mockResponse).then(function (logs: ILog[]) {
+            return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
                 expect(logFind).to.have.been.calledOnce;
                 expect(logFind).to.have.been.calledWith({}, undefined, undefined);
 
-                expect(logs).to.have.length(NUM_OF_LOGS);
+                expect(summary).to.exist;
+                expect(summary.buckets).to.have.length(1);
 
                 expect(statusStub).to.be.calledWithExactly(200);
 
@@ -80,7 +84,7 @@ describe("Log time summary", function () {
             it("Tests the source query", function () {
                 mockRequest.query = { source: "ABC123" };
 
-                return logSummary(mockRequest, mockResponse).then(function (logs: ILog[]) {
+                return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
                     expect(logFind).to.be.calledWith({ source: "ABC123" });
                 });
             });
@@ -88,7 +92,7 @@ describe("Log time summary", function () {
             it("Tests the start time query", function () {
                 mockRequest.query = { start_time: today };
 
-                return logSummary(mockRequest, mockResponse).then(function (log: ILog[]) {
+                return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
                     expect(logFind).to.be.calledWith({ timestamp: { $gte: today } }, undefined, undefined);
                 });
             });
@@ -96,7 +100,7 @@ describe("Log time summary", function () {
             it("Tests the end time query", function () {
                 mockRequest.query = { end_time: today };
 
-                return logSummary(mockRequest, mockResponse).then(function (log: ILog[]) {
+                return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
                     expect(logFind).to.be.calledWith({ timestamp: { $lte: today } }, undefined, undefined);
                 });
             });
@@ -104,7 +108,7 @@ describe("Log time summary", function () {
             it("Tests the sort query with ascending", function () {
                 mockRequest.query = { date_sort: "asc" };
 
-                return logSummary(mockRequest, mockResponse).then(function (logs: ILog[]) {
+                return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
                     expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: 1 } });
                 });
             });
@@ -112,7 +116,7 @@ describe("Log time summary", function () {
             it("Tests the sort query descending", function () {
                 mockRequest.query = { date_sort: "desc" };
 
-                return logSummary(mockRequest, mockResponse).then(function (logs: ILog[]) {
+                return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
                     expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: -1 } });
                 });
             });
@@ -120,7 +124,7 @@ describe("Log time summary", function () {
             it("Tests the sort query is ignored with invalid entry.", function () {
                 mockRequest.query = { date_sort: "noop" };
 
-                return logSummary(mockRequest, mockResponse).then(function (logs: ILog[]) {
+                return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
                     expect(logFind).to.be.calledWithExactly({}, undefined, undefined);
                 });
             });
@@ -141,7 +145,9 @@ describe("Log time summary", function () {
         });
 
         it("Tests that an error code is sent on failure", function () {
-            return logSummary(mockRequest, mockResponse).then(function (logs: ILog[]) {
+            return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
+                expect(summary).to.exist;
+                expect(summary.buckets).to.have.length(0);
                 expect(statusStub).to.have.been.calledWithExactly(400);
                 expect(sendStub).to.have.been.calledOnce;
                 expect(jsonStub).to.not.have.been.called;
