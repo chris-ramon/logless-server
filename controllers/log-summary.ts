@@ -40,10 +40,10 @@ export interface TimeBucket {
  *         required: false
  *         type: string
  *       - name: date_sort
- *          in: query
- *          description: The order in which the date buckets should be sorted. Can be "asc" or "desc".
- *          required: false
- *          type: string
+ *         in: query
+ *         description: The order in which the date buckets should be sorted. Can be "asc" or "desc".
+ *         required: false
+ *         type: string
  *     responses:
  *       200:
  *         description: Successful response

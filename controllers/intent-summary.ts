@@ -36,10 +36,10 @@ import { counter, Count, CountResult } from "../lib/counter";
  *         required: false
  *         type: string
  *       - name: count_sort
- *          in: query
- *          description: The order in which the count buckets should be sorted. Can be "asc" or "desc".
- *          required: false
- *          type: string
+ *         in: query
+ *         description: The order in which the count buckets should be sorted. Can be "asc" or "desc".
+ *         required: false
+ *         type: string
  *     responses:
  *       200:
  *         description: Successful response
