@@ -39,9 +39,10 @@ describe("Log time summary", function () {
     });
 
     describe("Successfull queries to the database.", function () {
+        let dummyLogs: ILog[];
 
         before(function () {
-            let dummyLogs: ILog[] = Utils.dummyRequests(NUM_OF_LOGS, (i: number) => {
+            dummyLogs = Utils.dummyRequests(NUM_OF_LOGS, "INFO", (i: number) => {
                 return today;
             });
             logFind = Sinon.stub(Log, "find").returns(Promise.resolve(dummyLogs));
@@ -61,7 +62,7 @@ describe("Log time summary", function () {
 
             return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
                 expect(logFind).to.have.been.calledOnce;
-                expect(logFind).to.have.been.calledWith({ "payload.request": { $exists: true }});
+                expect(logFind).to.have.been.calledWith({ "payload.request": { $exists: true } });
 
                 expect(result).to.not.be.undefined;
                 expect(result.count).to.have.length(1);
@@ -99,27 +100,120 @@ describe("Log time summary", function () {
                 });
             });
 
-            xit("Tests the sort query with ascending", function () {
-                mockRequest.query = { date_sort: "asc" };
+            describe("Sorting", function () {
+                let oldLogs: ILog[];
 
-                return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                    expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: 1 } });
+                before(function () {
+                    oldLogs = dummyLogs;
+
+                    let dateGetter = function (index: number): Date {
+                        return today;
+                    };
+                    dummyLogs = Utils.dummyRequests(6, "INFO", dateGetter);
+                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(1, "DEBUG", dateGetter));
+                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(8, "ERROR", dateGetter));
+                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(3, "VERBOSE", dateGetter));
+                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(7, "WARNING", dateGetter));
+                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(4, "CRASH", dateGetter));
+                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(2, "LOG", dateGetter));
+
+                    logFind.restore();
+                    logFind = Sinon.stub(Log, "find").returns(Promise.resolve(dummyLogs));
                 });
-            });
 
-            xit("Tests the sort query descending", function () {
-                mockRequest.query = { date_sort: "desc" };
-
-                return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                    expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: -1 } });
+                after(function () {
+                    dummyLogs = oldLogs;
+                    logFind.restore();
                 });
-            });
 
-            xit("Tests the sort query is ignored with invalid entry.", function () {
-                mockRequest.query = { date_sort: "noop" };
+                it("Tests the sort query with ascending", function () {
+                    mockRequest.query = { count_sort: "asc" };
 
-                return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                    expect(logFind).to.be.calledWithExactly({}, undefined, undefined);
+                    return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
+                        // Check that all the counts are in order from least to greatest.
+                        console.log(result);
+                        const count = result.count;
+                        expect(count[0].count).to.equal(1);
+                        expect(count[0].name).to.equal("DEBUG");
+
+                        expect(count[1].count).to.equal(2);
+                        expect(count[1].name).to.equal("LOG");
+
+                        expect(count[2].count).to.equal(3);
+                        expect(count[2].name).to.equal("VERBOSE");
+
+                        expect(count[3].count).to.equal(4);
+                        expect(count[3].name).to.equal("CRASH");
+
+                        expect(count[4].count).to.equal(6);
+                        expect(count[4].name).to.equal("INFO");
+
+                        expect(count[5].count).to.equal(7);
+                        expect(count[5].name).to.equal("WARNING");
+
+                        expect(count[6].count).to.equal(8);
+                        expect(count[6].name).to.equal("ERROR");
+                    });
+                });
+
+                it("Tests the sort query descending", function () {
+                    mockRequest.query = { count_sort: "desc" };
+
+                    return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
+                        // Check that all the counts are in order from least to greatest.
+                        const count = result.count;
+
+                        expect(count[0].count).to.equal(8);
+                        expect(count[0].name).to.equal("ERROR");
+
+                        expect(count[1].count).to.equal(7);
+                        expect(count[1].name).to.equal("WARNING");
+
+                        expect(count[2].count).to.equal(6);
+                        expect(count[2].name).to.equal("INFO");
+
+                        expect(count[3].count).to.equal(4);
+                        expect(count[3].name).to.equal("CRASH");
+
+                        expect(count[4].count).to.equal(3);
+                        expect(count[4].name).to.equal("VERBOSE");
+
+                        expect(count[5].count).to.equal(2);
+                        expect(count[5].name).to.equal("LOG");
+
+                        expect(count[6].count).to.equal(1);
+                        expect(count[6].name).to.equal("DEBUG");
+                    });
+                });
+
+                it("Tests the sort query is ignored with invalid entry.", function () {
+                    mockRequest.query = { count_sort: "noop" };
+
+                    return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
+                        // Check that all the counts are in order from least to greatest.
+                        const count = result.count;
+
+                        expect(count[0].count).to.equal(6);
+                        expect(count[0].name).to.equal("INFO");
+
+                        expect(count[1].count).to.equal(1);
+                        expect(count[1].name).to.equal("DEBUG");
+
+                        expect(count[2].count).to.equal(8);
+                        expect(count[2].name).to.equal("ERROR");
+
+                        expect(count[3].count).to.equal(3);
+                        expect(count[3].name).to.equal("VERBOSE");
+
+                        expect(count[4].count).to.equal(7);
+                        expect(count[4].name).to.equal("WARNING");
+
+                        expect(count[5].count).to.equal(4);
+                        expect(count[5].name).to.equal("CRASH");
+
+                        expect(count[6].count).to.equal(2);
+                        expect(count[6].name).to.equal("LOG");
+                    });
                 });
             });
         });
@@ -130,15 +224,15 @@ describe("Log time summary", function () {
             logFind = Sinon.stub(Log, "find").returns(Promise.reject(new Error("Errror thrown per requirement of the test.")));
         });
 
-        beforeEach(function() {
+        beforeEach(function () {
             logFind.reset();
         });
 
-        after(function() {
+        after(function () {
             logFind.restore();
         });
 
-        it ("Tests that an error code is sent on failure", function() {
+        it("Tests that an error code is sent on failure", function () {
             return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
                 expect(result).to.exist;
                 expect(result.count).to.have.length(0);

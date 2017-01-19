@@ -12,29 +12,29 @@ export function dummyLogs(count: number, dateGetter: (index: number) => Date = d
     let iLogs: ILog[] = [];
 
     for (let i = 0; i < count; ++i) {
-        const log: ILog = (i % 2) ? createRequestLog(dateGetter(i)) : createResponseLog(dateGetter(i));
+        const log: ILog = (i % 2) ? createRequestLog("INFO", dateGetter(i)) : createResponseLog(dateGetter(i));
         iLogs.push(log);
     }
 
     return iLogs;
 }
 
-export function dummyRequests(count: number, dateGetter: (index: number) => Date = dateGenerator): ILog[] {
+export function dummyRequests(count: number, requestType: string, dateGetter: (index: number) => Date = dateGenerator): ILog[] {
     let iLogs: ILog[] = [];
 
     for (let i = 0; i < count; ++i) {
-        const log: ILog = createRequestLog(dateGetter(i));
+        const log: ILog = createRequestLog(requestType, dateGetter(i));
         iLogs.push(log);
     }
 
     return iLogs;
 }
 
-export function createRequestLog(timestamp: Date): ILog {
+export function createRequestLog(requestType: string, timestamp: Date): ILog {
     return {
         source: createUUID(),
         transaction_id: createUUID(),
-        payload: requestPayload(),
+        payload: requestPayload(requestType),
         tags: ["request", "tag1", "tag2"],
         timestamp: new Date(),
         log_type: LogType.DEBUG
@@ -52,11 +52,11 @@ export function createResponseLog(timestamp: Date): ILog {
     };
 }
 
-export function requestPayload(): any {
+export function requestPayload(requestType: string): any {
     return {
         version: "1.0",
         request: {
-            type: "INFO",
+            type: requestType,
             local: "en-US",
             requestId: createUUID(),
             timestamp: new Date()
