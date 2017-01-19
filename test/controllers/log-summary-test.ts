@@ -17,33 +17,34 @@ const NUM_OF_LOGS = 6;
 
 describe("Log time summary", function () {
 
+    let logFind: Sinon.SinonStub;
+    let mockRequest: Request;
+    let mockResponse: Response;
+
+    let statusStub: Sinon.SinonStub;
+    let jsonStub: Sinon.SinonStub;
+    let sendStub: Sinon.SinonStub;
+
+    let today: Date = new Date();
+
+    beforeEach(function () {
+        logFind.reset();
+        mockRequest = <Request>{};
+        mockRequest.query = {};
+
+        mockResponse = <Response>{};
+        mockResponse.status = statusStub = Sinon.stub().returnsThis();
+        mockResponse.send = sendStub = Sinon.stub().returnsThis();
+        mockResponse.json = jsonStub = Sinon.stub().returnsThis();
+    });
+
     describe("Successfull queries to the database.", function () {
-        let logFind: Sinon.SinonStub;
-        let mockRequest: Request;
-        let mockResponse: Response;
-
-        let statusStub: Sinon.SinonStub;
-        let jsonStub: Sinon.SinonStub;
-        let sendStub: Sinon.SinonStub;
-
-        let today: Date = new Date();
 
         before(function () {
             let dummyLogs: ILog[] = Utils.dummyLogs(NUM_OF_LOGS, (i: number) => {
                 return today;
             });
             logFind = Sinon.stub(Log, "find").returns(Promise.resolve(dummyLogs));
-        });
-
-        beforeEach(function () {
-            logFind.reset();
-            mockRequest = <Request>{};
-            mockRequest.query = {};
-
-            mockResponse = <Response>{};
-            mockResponse.status = statusStub = Sinon.stub().returnsThis();
-            mockResponse.send = sendStub = Sinon.stub().returnsThis();
-            mockResponse.json = jsonStub = Sinon.stub().returnsThis();
         });
 
         after(function () {
@@ -60,7 +61,7 @@ describe("Log time summary", function () {
 
                 expect(logs).to.have.length(NUM_OF_LOGS);
 
-                expect(mockResponse.status).to.be.calledWithExactly(200);
+                expect(statusStub).to.be.calledWithExactly(200);
 
                 expect(jsonStub).to.have.been.calledOnce;
                 expect(jsonStub).to.have.been.calledWithExactly({
@@ -72,53 +73,67 @@ describe("Log time summary", function () {
             });
         });
 
-        describe("Tests the queries are properly set.", function() {
-            it("Tests the source query", function() {
+        describe("Tests the queries are properly set.", function () {
+            it("Tests the source query", function () {
                 mockRequest.query = { source: "ABC123" };
 
-                return logSummary(mockRequest, mockResponse).then(function(logs: ILog[]) {
+                return logSummary(mockRequest, mockResponse).then(function (logs: ILog[]) {
                     expect(logFind).to.be.calledWith({ source: "ABC123" });
                 });
             });
 
-            it ("Tests the start time query", function() {
+            it("Tests the start time query", function () {
                 mockRequest.query = { start_time: today };
 
-                return logSummary(mockRequest, mockResponse).then(function(log: ILog[]) {
+                return logSummary(mockRequest, mockResponse).then(function (log: ILog[]) {
                     expect(logFind).to.be.calledWith({ timestamp: { $gte: today } }, undefined, undefined);
                 });
             });
 
-            it ("Tests the end time query", function() {
+            it("Tests the end time query", function () {
                 mockRequest.query = { end_time: today };
 
-                return logSummary(mockRequest, mockResponse).then(function(log: ILog[]) {
+                return logSummary(mockRequest, mockResponse).then(function (log: ILog[]) {
                     expect(logFind).to.be.calledWith({ timestamp: { $lte: today } }, undefined, undefined);
                 });
             });
 
-            it ("Tests the sort query with ascending", function() {
+            it("Tests the sort query with ascending", function () {
                 mockRequest.query = { date_sort: "asc" };
 
-                return logSummary(mockRequest, mockResponse).then(function(logs: ILog[]) {
-                    expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: 1 }});
+                return logSummary(mockRequest, mockResponse).then(function (logs: ILog[]) {
+                    expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: 1 } });
                 });
             });
 
-            it ("Tests the sort query descending", function() {
+            it("Tests the sort query descending", function () {
                 mockRequest.query = { date_sort: "desc" };
 
-                return logSummary(mockRequest, mockResponse).then(function(logs: ILog[]) {
-                    expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: -1 }});
+                return logSummary(mockRequest, mockResponse).then(function (logs: ILog[]) {
+                    expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: -1 } });
                 });
             });
 
-            it ("Tests the sort query is ignored with invalid entry.", function() {
+            it("Tests the sort query is ignored with invalid entry.", function () {
                 mockRequest.query = { date_sort: "noop" };
 
-                return logSummary(mockRequest, mockResponse).then(function(logs: ILog[]) {
+                return logSummary(mockRequest, mockResponse).then(function (logs: ILog[]) {
                     expect(logFind).to.be.calledWithExactly({}, undefined, undefined);
                 });
+            });
+        });
+    });
+
+    describe("Unsuccessful queries.", function () {
+        before(function () {
+            logFind = Sinon.stub(Log, "find").returns(Promise.reject(new Error("Errror thrown per requirement of the test.")));
+        });
+
+        it ("Tests that an error code is sent on failure", function() {
+            return logSummary(mockRequest, mockResponse).then(function(logs: ILog[]) {
+                expect(statusStub).to.have.been.calledWithExactly(400);
+                expect(sendStub).to.have.been.calledOnce;
+                expect(jsonStub).to.not.have.been.called;
             });
         });
     });
