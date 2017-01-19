@@ -10,7 +10,7 @@ import Console from "../lib/console-utils";
 
 import { counter, Count, CountResult } from "../lib/counter";
 
-export default function (req: Request, res: Response) {
+export default function (req: Request, res: Response): Promise<CountResult> {
     const reqQuer = Object.assign({}, req.query);
 
     const query: any = {};
@@ -26,7 +26,7 @@ export default function (req: Request, res: Response) {
     Console.log("Querying for intent count summary");
     Console.log(query);
 
-    Log.find(query)
+    return Log.find(query)
         .then(function (logs: any[]) {
             return createSummary(logs);
         }).then(function (result: CountResult) {
@@ -34,9 +34,11 @@ export default function (req: Request, res: Response) {
         })
         .then(function (result: CountResult) {
             sendResult(res, result);
+            return result;
         })
         .catch(function (err: Error) {
             errorOut(err, res);
+            return { count: [] };
         });
 }
 

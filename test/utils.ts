@@ -19,6 +19,17 @@ export function dummyLogs(count: number, dateGetter: (index: number) => Date = d
     return iLogs;
 }
 
+export function dummyRequests(count: number, dateGetter: (index: number) => Date = dateGenerator): ILog[] {
+    let iLogs: ILog[] = [];
+
+    for (let i = 0; i < count; ++i) {
+        const log: ILog = createRequestLog(dateGetter(i));
+        iLogs.push(log);
+    }
+
+    return iLogs;
+}
+
 export function createRequestLog(timestamp: Date): ILog {
     return {
         source: createUUID(),
