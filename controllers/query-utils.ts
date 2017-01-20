@@ -18,12 +18,12 @@ export function getDateRange(req: Request, query: any)  {
 
     if (reqQuer.start_time) {
         timestamp = (timestamp) ? timestamp : {};
-        Object.assign(timestamp, { $gte: reqQuer.start_time });
+        Object.assign(timestamp, { $gte: new Date(reqQuer.start_time) });
     }
 
     if (reqQuer.end_time) {
         timestamp = (timestamp) ? timestamp : {};
-        Object.assign(timestamp, { $lte: reqQuer.end_time });
+        Object.assign(timestamp, { $lte: new Date(reqQuer.end_time) });
     }
 
     if (timestamp) {

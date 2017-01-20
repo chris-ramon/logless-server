@@ -71,15 +71,15 @@ import { Count, CountResult } from "../lib/counter";
 export default function (req: Request, res: Response): Promise<CountResult> {
     const reqQuer = Object.assign({}, req.query);
 
-    const query: any = {};
+    const query: any = {
+        "payload.request": { $exists: true }
+    };
 
     getDateRange(req, query);
 
     if (reqQuer.source) {
         Object.assign(query, { source: reqQuer.source });
     }
-
-    Object.assign(query, { "payload.request": { $exists: true } });
 
     Console.log("Querying for intent count summary");
     Console.log(query);
@@ -88,10 +88,7 @@ export default function (req: Request, res: Response): Promise<CountResult> {
 
     // match only by request as those are the only ones with request types.
     aggregation.push({
-        $match: {
-            "source": reqQuer.source,
-            "payload.request": { $exists: true }
-        }
+        $match: query
     });
 
     // Group by the request type in the payload and count the number.

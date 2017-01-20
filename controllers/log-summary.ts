@@ -117,12 +117,9 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
         }
     }
 
-    console.log(aggregation);
-
     return Log.aggregate(aggregation)
         .then(function (results: any[]): TimeBucket[] {
             return results.map(function (value: any, index: number, array: any[]): TimeBucket {
-                console.log(value);
                 const timeBucket: TimeBucket = {
                     date: new Date(value._id.year, value._id.month, value._id.day, 0, 0, 0, 0),
                     count: value.count
@@ -139,42 +136,7 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
             errorOut(err, res);
             return { bucket: [] };
         });
-
-    // let opt = undefined;
-    // if (reqQuer.date_sort) {
-    //     let sort = undefined;
-    //     if (reqQuer.date_sort === "asc") {
-    //         sort = 1;
-    //     } else if (reqQuer.date_sort === "desc") {
-    //         sort = -1;
-    //     }
-
-    //     if (sort) {
-    //         opt = {
-    //             sort: { timestamp: sort }
-    //         };
-    //     }
-    // }
-
-    // Console.log("Querying for time summary");
-    // Console.log(query);
-
-    // return Log.find(query, undefined, opt)
-    //     .then(function (logs: any[]) {
-    //         return createSummary(logs, res);
-    //     })
-    //     .catch(function (err: Error) {
-    //         errorOut(err, res);
-    //         return { buckets: [] };
-    //     });
 }
-
-// function createSummary(logs: ILog[], response: Response): TimeSummary {
-//     Console.info("Creating summary. " + logs.length);
-//     const timeSummary: TimeSummary = getTimeSummary(logs);
-//     response.status(200).json(timeSummary);
-//     return timeSummary;
-// }
 
 function sendOut(summary: TimeSummary, response: Response) {
     response.status(200).json(summary);
