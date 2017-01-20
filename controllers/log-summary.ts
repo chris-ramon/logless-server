@@ -134,7 +134,7 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
             return timeSummary;
         }).catch(function (err: Error) {
             errorOut(err, res);
-            return { bucket: [] };
+            return { buckets: [] };
         });
 }
 

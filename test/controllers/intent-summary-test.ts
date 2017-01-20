@@ -4,9 +4,7 @@ import * as SinonChai from "sinon-chai";
 
 import { Request, Response } from "express";
 
-import Log, { ILog } from "../../lib/log";
-
-import * as Utils from "../utils";
+import Log from "../../lib/log";
 
 import intentSummary from "../../controllers/intent-summary";
 import { CountResult } from "../../lib/counter";
@@ -16,9 +14,9 @@ const expect = Chai.expect;
 
 const NUM_OF_LOGS = 6;
 
-describe("Log time summary", function () {
+describe("Intent count summary", function () {
 
-    let logFind: Sinon.SinonStub;
+    let logAggregate: Sinon.SinonStub;
     let mockRequest: Request;
     let mockResponse: Response;
 
@@ -39,21 +37,26 @@ describe("Log time summary", function () {
     });
 
     describe("Successfull queries to the database.", function () {
-        let dummyLogs: ILog[];
+        let dummyLogs: Aggregate[];
+        let baseGroupObj: any;
 
         before(function () {
-            dummyLogs = Utils.dummyRequests(NUM_OF_LOGS, "INFO", (i: number) => {
-                return today;
-            });
-            logFind = Sinon.stub(Log, "find").returns(Promise.resolve(dummyLogs));
+            dummyLogs = dummyAggregates(NUM_OF_LOGS);
+            logAggregate = Sinon.stub(Log, "aggregate").returns(Promise.resolve(dummyLogs));
+            baseGroupObj = {
+                $group: {
+                    _id: "$payload.request.type",
+                    count: { $sum: 1 }
+                }
+            };
         });
 
         beforeEach(function () {
-            logFind.reset();
+            logAggregate.reset();
         });
 
         after(function () {
-            logFind.restore();
+            logAggregate.restore();
         });
 
         it("Tests the basic query.", function () {
@@ -61,15 +64,14 @@ describe("Log time summary", function () {
             startOfToday.setHours(0, 0, 0, 0);
 
             return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                expect(logFind).to.have.been.calledOnce;
-                expect(logFind).to.have.been.calledWith({ "payload.request": { $exists: true } });
+                expect(logAggregate).to.have.been.calledOnce;
+                expect(logAggregate).to.have.been.calledWith([{ $match: { "payload.request": { $exists: true } } }, baseGroupObj]);
 
                 expect(result).to.not.be.undefined;
-                expect(result.count).to.have.length(1);
+                expect(result.count).to.have.length(NUM_OF_LOGS);
 
                 expect(statusStub).to.be.calledWithExactly(200);
 
-                console.log(result);
                 expect(jsonStub).to.have.been.calledOnce;
                 expect(jsonStub).to.have.been.calledWithExactly(result);
             });
@@ -80,140 +82,64 @@ describe("Log time summary", function () {
                 mockRequest.query = { source: "ABC123" };
 
                 return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                    expect(logFind).to.be.calledWith({ "payload.request": { $exists: true }, source: "ABC123" });
+                    expect(logAggregate).to.be.calledWith([{ $match: { "payload.request": { $exists: true }, source: "ABC123" } }, baseGroupObj]);
                 });
             });
 
             it("Tests the start time query", function () {
-                mockRequest.query = { start_time: today };
+                mockRequest.query = { start_time: today.toISOString() };
 
                 return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                    expect(logFind).to.be.calledWith({ "payload.request": { $exists: true }, timestamp: { $gte: today } });
+                    const firstCallArgs = logAggregate.args[0][0];
+                    const matchArgs = firstCallArgs[0]["$match"];
+                    const timestamp = matchArgs.timestamp;
+
+                    expect(timestamp).to.have.key("$gte");
+                    expect(timestamp["$gte"]).to.equalDate(today);
                 });
             });
 
             it("Tests the end time query", function () {
-                mockRequest.query = { end_time: today };
+                mockRequest.query = { end_time: today.toISOString() };
 
                 return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                    expect(logFind).to.be.calledWith({ "payload.request": { $exists: true }, timestamp: { $lte: today } });
+                    const firstCallArgs = logAggregate.args[0][0];
+                    const matchArgs = firstCallArgs[0]["$match"];
+                    const timestamp = matchArgs.timestamp;
+
+                    expect(timestamp).to.have.key("$lte");
+                    expect(timestamp["$lte"]).to.equalDate(today);
                 });
             });
 
-            describe("Sorting", function () {
-                let oldLogs: ILog[];
+            it("Tests the sort query with ascending", function () {
+                mockRequest.query = { count_sort: "asc" };
 
-                before(function () {
-                    oldLogs = dummyLogs;
-
-                    let dateGetter = function (index: number): Date {
-                        return today;
-                    };
-                    dummyLogs = Utils.dummyRequests(6, "INFO", dateGetter);
-                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(1, "DEBUG", dateGetter));
-                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(8, "ERROR", dateGetter));
-                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(3, "VERBOSE", dateGetter));
-                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(7, "WARNING", dateGetter));
-                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(4, "CRASH", dateGetter));
-                    dummyLogs = dummyLogs.concat(Utils.dummyRequests(2, "LOG", dateGetter));
-
-                    logFind.restore();
-                    logFind = Sinon.stub(Log, "find").returns(Promise.resolve(dummyLogs));
+                return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
+                    const firstCallArgs = logAggregate.args[0][0];
+                    const sortArgs = firstCallArgs[2]["$sort"];
+                    expect(sortArgs).to.exist;
+                    expect(sortArgs).to.deep.equal({ count: 1 });
                 });
+            });
 
-                after(function () {
-                    dummyLogs = oldLogs;
-                    logFind.restore();
+            it("Tests the sort query descending", function () {
+                mockRequest.query = { count_sort: "desc" };
+
+                return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
+                    const firstCallArgs = logAggregate.args[0][0];
+                    const sortArgs = firstCallArgs[2]["$sort"];
+                    expect(sortArgs).to.exist;
+                    expect(sortArgs).to.deep.equal({ count: -1 });
                 });
+            });
 
-                it("Tests the sort query with ascending", function () {
-                    mockRequest.query = { count_sort: "asc" };
+            it("Tests the sort query is ignored with invalid entry.", function () {
+                mockRequest.query = { count_sort: "noop" };
 
-                    return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                        // Check that all the counts are in order from least to greatest.
-                        console.log(result);
-                        const count = result.count;
-                        expect(count[0].count).to.equal(1);
-                        expect(count[0].name).to.equal("DEBUG");
-
-                        expect(count[1].count).to.equal(2);
-                        expect(count[1].name).to.equal("LOG");
-
-                        expect(count[2].count).to.equal(3);
-                        expect(count[2].name).to.equal("VERBOSE");
-
-                        expect(count[3].count).to.equal(4);
-                        expect(count[3].name).to.equal("CRASH");
-
-                        expect(count[4].count).to.equal(6);
-                        expect(count[4].name).to.equal("INFO");
-
-                        expect(count[5].count).to.equal(7);
-                        expect(count[5].name).to.equal("WARNING");
-
-                        expect(count[6].count).to.equal(8);
-                        expect(count[6].name).to.equal("ERROR");
-                    });
-                });
-
-                it("Tests the sort query descending", function () {
-                    mockRequest.query = { count_sort: "desc" };
-
-                    return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                        // Check that all the counts are in order from least to greatest.
-                        const count = result.count;
-
-                        expect(count[0].count).to.equal(8);
-                        expect(count[0].name).to.equal("ERROR");
-
-                        expect(count[1].count).to.equal(7);
-                        expect(count[1].name).to.equal("WARNING");
-
-                        expect(count[2].count).to.equal(6);
-                        expect(count[2].name).to.equal("INFO");
-
-                        expect(count[3].count).to.equal(4);
-                        expect(count[3].name).to.equal("CRASH");
-
-                        expect(count[4].count).to.equal(3);
-                        expect(count[4].name).to.equal("VERBOSE");
-
-                        expect(count[5].count).to.equal(2);
-                        expect(count[5].name).to.equal("LOG");
-
-                        expect(count[6].count).to.equal(1);
-                        expect(count[6].name).to.equal("DEBUG");
-                    });
-                });
-
-                it("Tests the sort query is ignored with invalid entry.", function () {
-                    mockRequest.query = { count_sort: "noop" };
-
-                    return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                        // Check that all the counts are in order from least to greatest.
-                        const count = result.count;
-
-                        expect(count[0].count).to.equal(6);
-                        expect(count[0].name).to.equal("INFO");
-
-                        expect(count[1].count).to.equal(1);
-                        expect(count[1].name).to.equal("DEBUG");
-
-                        expect(count[2].count).to.equal(8);
-                        expect(count[2].name).to.equal("ERROR");
-
-                        expect(count[3].count).to.equal(3);
-                        expect(count[3].name).to.equal("VERBOSE");
-
-                        expect(count[4].count).to.equal(7);
-                        expect(count[4].name).to.equal("WARNING");
-
-                        expect(count[5].count).to.equal(4);
-                        expect(count[5].name).to.equal("CRASH");
-
-                        expect(count[6].count).to.equal(2);
-                        expect(count[6].name).to.equal("LOG");
-                    });
+                return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
+                    const firstCallArgs = logAggregate.args[0][0];
+                    expect(firstCallArgs[2]).to.not.exist;
                 });
             });
         });
@@ -221,15 +147,15 @@ describe("Log time summary", function () {
 
     describe("Unsuccessful queries.", function () {
         before(function () {
-            logFind = Sinon.stub(Log, "find").returns(Promise.reject(new Error("Errror thrown per requirement of the test.")));
+            logAggregate = Sinon.stub(Log, "aggregate").returns(Promise.reject(new Error("Errror thrown per requirement of the test.")));
         });
 
         beforeEach(function () {
-            logFind.reset();
+            logAggregate.reset();
         });
 
         after(function () {
-            logFind.restore();
+            logAggregate.restore();
         });
 
         it("Tests that an error code is sent on failure", function () {
@@ -243,3 +169,19 @@ describe("Log time summary", function () {
         });
     });
 });
+
+interface Aggregate {
+    _id: string;
+    count: number;
+}
+
+function dummyAggregates(num: number): Aggregate[] {
+    let aggs: Aggregate[] = [];
+    for (let i = 0; i < num; ++i) {
+        aggs.push({
+            _id: "aggragte" + i,
+            count: i
+        });
+    }
+    return aggs;
+}

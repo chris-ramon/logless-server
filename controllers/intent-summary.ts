@@ -5,7 +5,7 @@ import { Request, Response } from "express";
 
 import { getDateRange } from "./query-utils";
 
-import Log, { ILog } from "../lib/log";
+import Log from "../lib/log";
 import Console from "../lib/console-utils";
 
 import { Count, CountResult } from "../lib/counter";

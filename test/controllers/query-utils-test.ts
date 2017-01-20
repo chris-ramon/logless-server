@@ -26,7 +26,7 @@ describe("QueryUtils", function() {
 
             const rangeObj = testQuery.timestamp;
 
-            expect(rangeObj.$gte).to.equal(now);
+            expect(rangeObj.$gte).to.equalDate(now);
         });
 
         it ("Tests the query is updated when no timestamp is provided and end_time is needed.", function() {
@@ -44,7 +44,7 @@ describe("QueryUtils", function() {
 
             const rangeObj = testQuery.timestamp;
 
-            expect(rangeObj.$lte).to.equal(now);
+            expect(rangeObj.$lte).to.equalDate(now);
         });
 
         it ("Tests the query is updated when a timestamp is provided and start_time and end_time is needed.", function() {
@@ -65,8 +65,8 @@ describe("QueryUtils", function() {
 
             const rangeObj = testQuery.timestamp;
 
-            expect(rangeObj.$gte).to.equal(yesterday);
-            expect(rangeObj.$lte).to.equal(now);
+            expect(rangeObj.$gte).to.equalDate(yesterday);
+            expect(rangeObj.$lte).to.equalDate(now);
             expect(rangeObj.parameter).to.equal(5);
         });
     });
