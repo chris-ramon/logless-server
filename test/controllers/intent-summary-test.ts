@@ -12,7 +12,7 @@ import { CountResult } from "../../lib/counter";
 Chai.use(SinonChai);
 const expect = Chai.expect;
 
-const NUM_OF_LOGS = 6;
+const NUM_OF_AGGS = 6;
 
 describe("Intent count summary", function () {
 
@@ -37,12 +37,12 @@ describe("Intent count summary", function () {
     });
 
     describe("Successfull queries to the database.", function () {
-        let dummyLogs: Aggregate[];
+        let dummyAggs: Aggregate[];
         let baseGroupObj: any;
 
         before(function () {
-            dummyLogs = dummyAggregates(NUM_OF_LOGS);
-            logAggregate = Sinon.stub(Log, "aggregate").returns(Promise.resolve(dummyLogs));
+            dummyAggs = dummyAggregates(NUM_OF_AGGS);
+            logAggregate = Sinon.stub(Log, "aggregate").returns(Promise.resolve(dummyAggs));
             baseGroupObj = {
                 $group: {
                     _id: "$payload.request.type",
@@ -68,7 +68,7 @@ describe("Intent count summary", function () {
                 expect(logAggregate).to.have.been.calledWith([{ $match: { "payload.request": { $exists: true } } }, baseGroupObj]);
 
                 expect(result).to.not.be.undefined;
-                expect(result.count).to.have.length(NUM_OF_LOGS);
+                expect(result.count).to.have.length(NUM_OF_AGGS);
 
                 expect(statusStub).to.be.calledWithExactly(200);
 

@@ -13,7 +13,7 @@ import logSummary from "../../controllers/log-summary";
 Chai.use(SinonChai);
 const expect = Chai.expect;
 
-const NUM_OF_LOGS = 6;
+const NUM_OF_AGGS = 6;
 
 describe("Log time summary", function () {
 
@@ -42,8 +42,8 @@ describe("Log time summary", function () {
         let baseGroup: any;
 
         before(function () {
-            let dummyLogs: Aggregate[] = dummyAggregates(NUM_OF_LOGS);
-            logAggregate = Sinon.stub(Log, "aggregate").returns(Promise.resolve(dummyLogs));
+            let dummyAggs: Aggregate[] = dummyAggregates(NUM_OF_AGGS);
+            logAggregate = Sinon.stub(Log, "aggregate").returns(Promise.resolve(dummyAggs));
             baseGroup = {
                 $group: {
                     _id: {
@@ -75,7 +75,7 @@ describe("Log time summary", function () {
                 expect(logAggregate).to.have.been.calledWith([{ $match: {} }, baseGroup]);
 
                 expect(summary).to.exist;
-                expect(summary.buckets).to.have.length(NUM_OF_LOGS);
+                expect(summary.buckets).to.have.length(NUM_OF_AGGS);
 
                 expect(statusStub).to.be.calledWithExactly(200);
 
