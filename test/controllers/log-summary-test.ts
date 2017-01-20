@@ -4,11 +4,8 @@ import * as SinonChai from "sinon-chai";
 
 import { Request, Response } from "express";
 
-import Log, { ILog } from "../../lib/log";
+import Log from "../../lib/log";
 import { TimeSummary } from "../../lib/time-bucket";
-
-
-import * as Utils from "../utils";
 
 import logSummary from "../../controllers/log-summary";
 
@@ -16,11 +13,11 @@ import logSummary from "../../controllers/log-summary";
 Chai.use(SinonChai);
 const expect = Chai.expect;
 
-const NUM_OF_LOGS = 6;
+const NUM_OF_AGGS = 6;
 
 describe("Log time summary", function () {
 
-    let logFind: Sinon.SinonStub;
+    let logAggregate: Sinon.SinonStub;
     let mockRequest: Request;
     let mockResponse: Response;
 
@@ -42,19 +39,31 @@ describe("Log time summary", function () {
 
     describe("Successfull queries to the database.", function () {
 
+        let baseGroup: any;
+
         before(function () {
-            let dummyLogs: ILog[] = Utils.dummyLogs(NUM_OF_LOGS, (i: number) => {
-                return today;
-            });
-            logFind = Sinon.stub(Log, "find").returns(Promise.resolve(dummyLogs));
+            let dummyAggs: Aggregate[] = dummyAggregates(NUM_OF_AGGS);
+            logAggregate = Sinon.stub(Log, "aggregate").returns(Promise.resolve(dummyAggs));
+            baseGroup = {
+                $group: {
+                    _id: {
+                        month: { $month: "$timestamp" },
+                        day: { $dayOfMonth: "$timestamp" },
+                        year: { $year: "$timestamp" }
+                    },
+                    count: {
+                        $sum: 1
+                    }
+                }
+            };
         });
 
         beforeEach(function () {
-            logFind.reset();
+            logAggregate.reset();
         });
 
         after(function () {
-            logFind.restore();
+            logAggregate.restore();
         });
 
         it("Tests the basic query.", function () {
@@ -62,21 +71,16 @@ describe("Log time summary", function () {
             startOfToday.setHours(0, 0, 0, 0);
 
             return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
-                expect(logFind).to.have.been.calledOnce;
-                expect(logFind).to.have.been.calledWith({}, undefined, undefined);
+                expect(logAggregate).to.have.been.calledOnce;
+                expect(logAggregate).to.have.been.calledWith([{ $match: {} }, baseGroup]);
 
                 expect(summary).to.exist;
-                expect(summary.buckets).to.have.length(1);
+                expect(summary.buckets).to.have.length(NUM_OF_AGGS);
 
                 expect(statusStub).to.be.calledWithExactly(200);
 
                 expect(jsonStub).to.have.been.calledOnce;
-                expect(jsonStub).to.have.been.calledWithExactly({
-                    buckets: [{
-                        date: startOfToday,
-                        count: NUM_OF_LOGS
-                    }]
-                });
+                expect(jsonStub).to.have.been.calledWithExactly(summary);
             });
         });
 
@@ -85,15 +89,21 @@ describe("Log time summary", function () {
                 mockRequest.query = { source: "ABC123" };
 
                 return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
-                    expect(logFind).to.be.calledWith({ source: "ABC123" });
+                    expect(logAggregate).to.be.calledWith([{ $match: { source: "ABC123" } }, baseGroup]);
                 });
             });
 
             it("Tests the start time query", function () {
-                mockRequest.query = { start_time: today };
+                mockRequest.query = { start_time: today.toISOString() };
 
                 return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
-                    expect(logFind).to.be.calledWith({ timestamp: { $gte: today } }, undefined, undefined);
+                    const firstCallArgs = logAggregate.args[0][0];
+                    const matchArgs = firstCallArgs[0]["$match"];
+                    const timestamp = matchArgs.timestamp;
+
+                    expect(timestamp).to.exist;
+                    expect(timestamp["$gte"]).to.equalDate(today);
+                    // expect(logAggregate).to.be.calledWith([{ $match: { timestamp: { $gte: today } } }, baseGroup]);
                 });
             });
 
@@ -101,7 +111,12 @@ describe("Log time summary", function () {
                 mockRequest.query = { end_time: today };
 
                 return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
-                    expect(logFind).to.be.calledWith({ timestamp: { $lte: today } }, undefined, undefined);
+                    const firstCallArgs = logAggregate.args[0][0];
+                    const matchArgs = firstCallArgs[0]["$match"];
+                    const timestamp = matchArgs.timestamp;
+
+                    expect(timestamp).to.exist;
+                    expect(timestamp["$lte"]).to.equalDate(today);
                 });
             });
 
@@ -109,7 +124,13 @@ describe("Log time summary", function () {
                 mockRequest.query = { date_sort: "asc" };
 
                 return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
-                    expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: 1 } });
+                    const firstCallArgs = logAggregate.args[0][0];
+                    const sortArgs = firstCallArgs[2]["$sort"];
+
+                    expect(sortArgs).to.exist;
+                    expect(sortArgs["_id.year"]).to.equal(1);
+                    expect(sortArgs["_id.month"]).to.equal(1);
+                    expect(sortArgs["_id.day"]).to.equal(1);
                 });
             });
 
@@ -117,7 +138,13 @@ describe("Log time summary", function () {
                 mockRequest.query = { date_sort: "desc" };
 
                 return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
-                    expect(logFind).to.be.calledWith({}, undefined, { sort: { timestamp: -1 } });
+                    const firstCallArgs = logAggregate.args[0][0];
+                    const sortArgs = firstCallArgs[2]["$sort"];
+
+                    expect(sortArgs).to.exist;
+                    expect(sortArgs["_id.year"]).to.equal(-1);
+                    expect(sortArgs["_id.month"]).to.equal(-1);
+                    expect(sortArgs["_id.day"]).to.equal(-1);
                 });
             });
 
@@ -125,7 +152,9 @@ describe("Log time summary", function () {
                 mockRequest.query = { date_sort: "noop" };
 
                 return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
-                    expect(logFind).to.be.calledWithExactly({}, undefined, undefined);
+                    const firstCallArgs = logAggregate.args[0][0];
+
+                    expect(firstCallArgs[2]).to.not.exist;
                 });
             });
         });
@@ -133,15 +162,15 @@ describe("Log time summary", function () {
 
     describe("Unsuccessful queries.", function () {
         before(function () {
-            logFind = Sinon.stub(Log, "find").returns(Promise.reject(new Error("Errror thrown per requirement of the test.")));
+            logAggregate = Sinon.stub(Log, "aggregate").returns(Promise.reject(new Error("Errror thrown per requirement of the test.")));
         });
 
-        beforeEach(function() {
-            logFind.reset();
+        beforeEach(function () {
+            logAggregate.reset();
         });
 
-        after(function() {
-            logFind.restore();
+        after(function () {
+            logAggregate.restore();
         });
 
         it("Tests that an error code is sent on failure", function () {
@@ -155,3 +184,27 @@ describe("Log time summary", function () {
         });
     });
 });
+
+interface Aggregate {
+    _id: {
+        month: number,
+        day: number,
+        year: number
+    };
+    count: number;
+}
+
+function dummyAggregates(num: number): Aggregate[] {
+    let aggs: Aggregate[] = [];
+    for (let i = 0; i < num; i++) {
+        aggs.push({
+            _id: {
+                month: i,
+                day: i + 1,
+                year: i + 2000
+            },
+            count: i
+        });
+    }
+    return aggs;
+}
