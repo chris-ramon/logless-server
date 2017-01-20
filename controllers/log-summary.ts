@@ -9,11 +9,6 @@ import Log, { ILog } from "../lib/log";
 import { getTimeSummary, TimeSummary } from "../lib/time-bucket";
 import Console from "../lib/console-utils";
 
-export interface TimeBucket {
-    timestamp: Date;
-    count: number;
-}
-
 /**
  * @swagger
  * /timeSummary:

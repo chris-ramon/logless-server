@@ -84,45 +84,53 @@ export default function (req: Request, res: Response): Promise<CountResult> {
     Console.log("Querying for intent count summary");
     Console.log(query);
 
-    return Log.find(query)
-        .then(function (logs: any[]) {
-            return createSummary(logs);
-        }).then(function (result: CountResult) {
-            return sort(result, reqQuer.count_sort);
-        })
-        .then(function (result: CountResult) {
-            sendResult(res, result);
-            return result;
-        })
-        .catch(function (err: Error) {
-            errorOut(err, res);
-            return { count: [] };
-        });
-}
+console.time("Query");
+    const aggregation: any[] = [];
 
-function createSummary(logs: ILog[]): CountResult {
-    return counter({
-        length() {
-            return logs.length;
-        },
-        name(index: number) {
-            const payload = logs[index].payload;
-            return payload.request.type;
+    // match only by request as those are the only ones with request types.
+    aggregation.push({
+        $match: {
+            "source": reqQuer.source,
+            "payload.request": { $exists: true }
         }
     });
-}
 
-function sort(result: CountResult, direction: string): CountResult {
-    if (direction === "desc") {
-        result.count.sort(function (a: Count, b: Count): number {
-            return b.count - a.count;
-        });
-    } else if (direction === "asc") {
-        result.count.sort(function (a: Count, b: Count): number {
-            return a.count - b.count;
-        });
+    // Group by the request type in the payload and count the number.
+    aggregation.push({
+        $group: {
+            _id: "$payload.request.type",
+            count: { $sum: 1 }
+        }
+    });
+
+    // Only push if there is a value "count_sort" in the request.
+    if (reqQuer.count_sort) {
+        if (reqQuer.count_sort === "asc") {
+            aggregation.push({ $sort: { count: 1}});
+        } else if (reqQuer.count_sort === "desc") {
+            aggregation.push({ $sort: { count: -1}});
+        }
     }
-    return result;
+
+    return Log.aggregate(aggregation)
+    .then(function (aggregation: any[]): Count[] {
+        return aggregation.map(function (value: any, index: number, array: any[]): Count {
+            const count: Count = {
+                name: value._id,
+                count: value.count
+            };
+            return count;
+        });
+    }).then(function (counts: Count[]): CountResult {
+        const result: CountResult = {
+            count: counts
+        };
+
+        sendResult(res, result);
+        return result;
+    }).catch(function (err: Error) {
+        errorOut(err, res);
+    });
 }
 
 function sendResult(response: Response, result: CountResult) {
