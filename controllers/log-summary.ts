@@ -5,8 +5,8 @@ import { Request, Response } from "express";
 
 import { getDateRange } from "./query-utils";
 
-import Log, { ILog } from "../lib/log";
-import { getTimeSummary, TimeSummary } from "../lib/time-bucket";
+import Log from "../lib/log";
+import { TimeBucket, TimeSummary } from "../lib/time-bucket";
 import Console from "../lib/console-utils";
 
 /**
@@ -70,7 +70,7 @@ import Console from "../lib/console-utils";
 export default function (req: Request, res: Response): Promise<TimeSummary> {
     const reqQuer = Object.assign({}, req.query);
 
-    const query: any = {};
+    const query = {};
 
     getDateRange(req, query);
 
@@ -78,40 +78,106 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
         Object.assign(query, { source: reqQuer.source });
     }
 
-    let opt = undefined;
-    if (reqQuer.date_sort) {
-        let sort = undefined;
-        if (reqQuer.date_sort === "asc") {
-            sort = 1;
-        } else if (reqQuer.date_sort === "desc") {
-            sort = -1;
-        }
+    let aggregation = [];
 
-        if (sort) {
-            opt = {
-                sort: { timestamp: sort }
-            };
+    aggregation.push({
+        $match: query
+    });
+
+    aggregation.push({
+        $group: {
+            _id: {
+                month: { $month: "$timestamp" },
+                day: { $dayOfMonth: "$timestamp" },
+                year: { $year: "$timestamp" }
+            },
+            count: {
+                $sum: 1
+            }
+        }
+    });
+
+    if (reqQuer.date_sort) {
+        if (reqQuer.date_sort === "asc") {
+            aggregation.push({
+                $sort: {
+                    "_id.year": 1,
+                    "_id.month": 1,
+                    "_id.day": 1
+                }
+            });
+        } else if (reqQuer.date_sort === "desc") {
+            aggregation.push({
+                $sort: {
+                    "_id.year": -1,
+                    "_id.month": -1,
+                    "_id.day": -1
+                }
+            });
         }
     }
 
-    Console.log("Querying for time summary");
-    Console.log(query);
+    console.log(aggregation);
 
-    return Log.find(query, undefined, opt)
-        .then(function (logs: any[]) {
-            return createSummary(logs, res);
-        })
-        .catch(function (err: Error) {
+    return Log.aggregate(aggregation)
+        .then(function (results: any[]): TimeBucket[] {
+            return results.map(function (value: any, index: number, array: any[]): TimeBucket {
+                console.log(value);
+                const timeBucket: TimeBucket = {
+                    date: new Date(value._id.year, value._id.month, value._id.day, 0, 0, 0, 0),
+                    count: value.count
+                };
+                return timeBucket;
+            });
+        }).then(function (buckets: TimeBucket[]): TimeSummary {
+            const timeSummary: TimeSummary = {
+                buckets: buckets
+            };
+            sendOut(timeSummary, res);
+            return timeSummary;
+        }).catch(function (err: Error) {
             errorOut(err, res);
-            return { buckets: [] };
+            return { bucket: [] };
         });
+
+    // let opt = undefined;
+    // if (reqQuer.date_sort) {
+    //     let sort = undefined;
+    //     if (reqQuer.date_sort === "asc") {
+    //         sort = 1;
+    //     } else if (reqQuer.date_sort === "desc") {
+    //         sort = -1;
+    //     }
+
+    //     if (sort) {
+    //         opt = {
+    //             sort: { timestamp: sort }
+    //         };
+    //     }
+    // }
+
+    // Console.log("Querying for time summary");
+    // Console.log(query);
+
+    // return Log.find(query, undefined, opt)
+    //     .then(function (logs: any[]) {
+    //         return createSummary(logs, res);
+    //     })
+    //     .catch(function (err: Error) {
+    //         errorOut(err, res);
+    //         return { buckets: [] };
+    //     });
 }
 
-function createSummary(logs: ILog[], response: Response): TimeSummary {
-    Console.info("Creating summary. " + logs.length);
-    const timeSummary: TimeSummary = getTimeSummary(logs);
-    response.status(200).json(timeSummary);
-    return timeSummary;
+// function createSummary(logs: ILog[], response: Response): TimeSummary {
+//     Console.info("Creating summary. " + logs.length);
+//     const timeSummary: TimeSummary = getTimeSummary(logs);
+//     response.status(200).json(timeSummary);
+//     return timeSummary;
+// }
+
+function sendOut(summary: TimeSummary, response: Response) {
+    response.status(200).json(summary);
 }
 
 function errorOut(error: Error, response: Response) {

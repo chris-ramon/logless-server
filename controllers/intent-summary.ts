@@ -8,7 +8,7 @@ import { getDateRange } from "./query-utils";
 import Log, { ILog } from "../lib/log";
 import Console from "../lib/console-utils";
 
-import { counter, Count, CountResult } from "../lib/counter";
+import { Count, CountResult } from "../lib/counter";
 
 /**
  * @swagger
@@ -84,7 +84,6 @@ export default function (req: Request, res: Response): Promise<CountResult> {
     Console.log("Querying for intent count summary");
     Console.log(query);
 
-console.time("Query");
     const aggregation: any[] = [];
 
     // match only by request as those are the only ones with request types.
@@ -130,6 +129,7 @@ console.time("Query");
         return result;
     }).catch(function (err: Error) {
         errorOut(err, res);
+        return { count: [] };
     });
 }
 
