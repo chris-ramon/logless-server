@@ -21,7 +21,7 @@ export interface SourceStats {
 
 /**
  * @swagger
- * /sourceStats:
+ * /sourcestats:
  *   get:
  *     tags:
  *       - Query
@@ -140,6 +140,10 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             return Log.distinct("payload.context.user.userId", query);
         }).then(function (res: Document[]) {
             stats.stats.uniqueUsers = res.length;
+            const errorQuery: any = Object.assign(query, { "log_type": "ERROR" });
+            return Log.find(errorQuery);
+        }).then(function(res: Document[]) {
+            stats.stats.totalExceptions = res.length;
             return stats;
         }).then(function (value: SourceStats) {
             sendResult(res, value);
