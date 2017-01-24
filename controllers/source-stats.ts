@@ -151,6 +151,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 {
                     // Return the size of the remaining array.
                     $project: {
+                        _id: 0,
                         totalUsers: { $size: "$distinctIds" }
                     }
                 }
@@ -161,6 +162,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     return Log.aggregate(aggregation)
         .then(function (val: any[]): SourceStats {
             const record: any = val[0];
+            console.log(record);
             const stats: SourceStats = processRecord(sourceId, record);
             sendResult(res, stats);
             return stats;
