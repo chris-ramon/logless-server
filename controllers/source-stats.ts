@@ -13,7 +13,7 @@ import Console from "../lib/console-utils";
 export interface SourceStats {
     source: string;
     stats: {
-        uniqueUsers: number;
+        totalUsers: number;
         totalExceptions: number;
         totalEvents: number;
     };
@@ -53,7 +53,7 @@ export interface SourceStats {
  *              -  title: stats
  *                 type: object
  *                 properties:
- *                      uniqueUsers:
+ *                      totalUsers:
  *                          type: number
  *                      totalExceptions:
  *                          type: number
@@ -88,9 +88,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
         });
     }
 
-    const query: any = {
-        "payload.context.user.userId": { $exists: true }
-    };
+    const query: any = {};
 
     getDateRange(req, query);
 
@@ -98,64 +96,95 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
         Object.assign(query, { source: reqQuer.source });
     }
 
-    Console.log("Querying for log unique users.");
+    Console.log("Querying for source stats.");
     Console.log(query);
 
     const aggregation: any[] = [];
 
-    // match only by request as those are the only ones with user IDs.
+    // match only by request as those are the only ones with request types.
     aggregation.push({
         $match: query
     });
 
-    // Group by the request type in the payload and count the number.
+    // Using facet aggregation to put all the stats together by one.
     aggregation.push({
-        $group: {
-            _id: "$payload.context.user.userId",
-            count: { $sum: 1 }
+        $facet: {
+            records: [
+                {
+                    $group: { _id: "$transaction_id" }
+                },
+                {
+                    $count: "totalEvents"
+                }
+            ],
+            errors: [
+                {
+                    $match: { log_type: "ERROR" },
+                },
+                {
+                    $count: "totalExceptions"
+                }
+            ],
+            sessionUsers: [
+                {
+                    // Collect all user IDs in array.
+                    $project:
+                    {
+                        _id: 0,
+                        IDS: ["$payload.session.user.userId", "$payload.context.System.user.userId"]
+                    }
+                }, {
+                    // Unwind the array in to individual objects
+                    $unwind: "$IDS"
+                },
+                {
+                    // Remove all nulls
+                    $match: {
+                        IDS: { $ne: null }
+                    }
+                },
+                {
+                    // Group them together
+                    $group: {
+                        _id: 1,
+                        distinctIds: {
+                            $addToSet: "$IDS"
+                        }
+                    }
+                },
+                {
+                    // Return the size of the remaining array.
+                    $project: {
+                        totalUsers: { $size: "$distinctIds" }
+                    }
+                }
+            ]
         }
     });
 
-    // Only push if there is a value "count_sort" in the request.
-    if (reqQuer.count_sort) {
-        if (reqQuer.count_sort === "asc") {
-            aggregation.push({ $sort: { count: 1 } });
-        } else if (reqQuer.count_sort === "desc") {
-            aggregation.push({ $sort: { count: -1 } });
-        }
-    }
-
-    let stats: SourceStats = {
-        source: sourceId,
-        stats: {
-            uniqueUsers: 0,
-            totalExceptions: 0,
-            totalEvents: 0
-        }
-    };
-
-    return Log.find(query)
-        .then(function (res: Document[]) {
-            stats.stats.totalEvents = res.length;
-            return Log.distinct("payload.context.user.userId", query);
-        }).then(function (res: Document[]) {
-            stats.stats.uniqueUsers = res.length;
-            const errorQuery: any = Object.assign(query, { "log_type": "ERROR" });
-            return Log.find(errorQuery);
-        }).then(function(res: Document[]) {
-            stats.stats.totalExceptions = res.length;
+    return Log.aggregate(aggregation)
+        .then(function (val: any[]): SourceStats {
+            const record: any = val[0];
+            const stats: SourceStats = {
+                source: sourceId,
+                stats: {
+                    totalUsers: record.sessionUsers[0].totalUsers,
+                    totalEvents: record.records[0].totalEvents,
+                    totalExceptions: record.errors[0].totalExceptions
+                }
+            };
+            sendResult(res, stats);
             return stats;
-        }).then(function (value: SourceStats) {
-            sendResult(res, value);
-            return value;
-        })
-        .catch(function (err: Error) {
+        }).catch(function (err: Error) {
             errorOut(err, res);
-            return { count: [] };
+            return {
+                source: "",
+                stats: undefined
+            };
         });
 }
 
-function sendResult(response: Response, result: SourceStats) {
+function sendResult(response: Response, result: any) {
     response.status(200).json(result);
 }
 
