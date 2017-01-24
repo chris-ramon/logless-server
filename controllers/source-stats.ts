@@ -88,11 +88,9 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 
     const query: any = {};
 
-    getDateRange(req, query);
+    Object.assign(query, { source: sourceId });
 
-    if (reqQuer.source) {
-        Object.assign(query, { source: reqQuer.source });
-    }
+    getDateRange(req, query);
 
     Console.log("Querying for source stats.");
     Console.log(query);
