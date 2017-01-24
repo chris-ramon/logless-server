@@ -3,8 +3,6 @@
  */
 import { Request, Response } from "express";
 
-import { Document } from "mongoose";
-
 import { getDateRange } from "./query-utils";
 
 import Log from "../lib/log";
