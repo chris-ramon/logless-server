@@ -123,45 +123,86 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             ],
             sessionUsers: [
                 {
-                    // Collect all user IDs in array.
-                    $project:
-                    {
-                        _id: 0,
-                        IDS: ["$payload.session.user.userId", "$payload.context.System.user.userId"]
-                    }
-                }, {
-                    // Unwind the array in to individual objects
-                    $unwind: "$IDS"
-                },
-                {
-                    // Remove all nulls
-                    $match: {
-                        IDS: { $ne: null }
-                    }
-                },
-                {
-                    // Group them together
                     $group: {
-                        _id: 1,
-                        distinctIds: {
-                            $addToSet: "$IDS"
+                        _id: null,
+                        ID: {
+                            $addToSet: {
+                                foo_id: "$payload.session.user.userId",
+                                bar_id: "$payload.context.System.user.userId"
+                            }
                         }
                     }
                 },
                 {
-                    // Return the size of the remaining array.
+                    $project: {
+                        ID: {
+                            $setUnion: ["$ID.foo_id", "$ID.bar_id"]
+                        },
+                        _id: 0
+                    }
+                },
+                {
+                    $project: {
+                        ID: {
+                            $filter: {input: "$ID", as: "id", cond: { $ne: [ {$type: "$$id"}, "undefined" ]}}
+                        }
+                    }
+                },
+                {
                     $project: {
                         _id: 0,
-                        totalUsers: { $size: "$distinctIds" }
+                        totalUsers: { $size: "$ID" }
                     }
                 }
+
+                // {
+                //     // Collect all user IDs in array.
+                //     $project:
+                //     {
+                //         _id: 0,
+                //         IDS: ["$payload.session.user.userId", "$payload.context.System.user.userId"]
+                //     }
+                // }, {
+                //     // Unwind the array in to individual objects
+                //     $unwind: "$IDS"
+                // },
+                // {
+                //     $project: {
+                //         ID: {
+                //             // Remove all nulls
+                //             $filter: { input: "$ID", as: "id", cond: { $ne: [ "$$id", null ] }}
+                //         }
+                //     }
+                //     // $match: {
+                //     //     IDS: { $ne: null }
+                //     // }
+                // },
+                // {
+                //     // Group them together
+                //     $group: {
+                //         _id: 1,
+                //         distinctIds: {
+                //             $addToSet: "$IDS"
+                //         }
+                //     }
+                // },
+                // {
+                //     // Return the size of the remaining array.
+                //     $project: {
+                //         _id: 0,
+                //         totalUsers: { $size: "$distinctIds" }
+                //     }
+                // }
             ]
         }
     });
 
+    console.log(aggregation[1]);
+
     return Log.aggregate(aggregation)
         .then(function (val: any[]): SourceStats {
             const record: any = val[0];
+            console.log(record.sessionUsers);
             const stats: SourceStats = processRecord(sourceId, record);
             sendResult(res, stats);
             return stats;
