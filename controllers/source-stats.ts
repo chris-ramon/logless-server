@@ -165,14 +165,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     return Log.aggregate(aggregation)
         .then(function (val: any[]): SourceStats {
             const record: any = val[0];
-            const stats: SourceStats = {
-                source: sourceId,
-                stats: {
-                    totalUsers: record.sessionUsers[0].totalUsers,
-                    totalEvents: record.records[0].totalEvents,
-                    totalExceptions: record.errors[0].totalExceptions
-                }
-            };
+            const stats: SourceStats = processRecord(sourceId, record);
             sendResult(res, stats);
             return stats;
         }).catch(function (err: Error) {
@@ -182,6 +175,28 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 stats: undefined
             };
         });
+}
+
+function processRecord(sourceId: string, record: any): SourceStats {
+    if (record) {
+        return {
+            source: sourceId,
+            stats: {
+                totalUsers: (record.sessionUsers[0]) ? record.sessionUsers[0].totalUsers : 0,
+                totalEvents: (record.records[0]) ? record.records[0].totalEvents : 0,
+                totalExceptions: (record.records[0]) ? record.errors[0].totalExceptions : 0
+            }
+        };
+    } else {
+        return {
+            source: sourceId,
+            stats: {
+                totalUsers: 0,
+                totalEvents: 0,
+                totalExceptions: 0
+            }
+        };
+    }
 }
 
 function sendResult(response: Response, result: any) {
