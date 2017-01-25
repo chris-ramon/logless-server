@@ -164,62 +164,71 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     console.log(usersAgg);
 
     // Using facet aggregation to put all the stats together by one.
-    // aggregation.push({
-    //     $facet: {
-    //         records: [
-    //             {
-    //                 $group: { _id: "$transaction_id" }
-    //             },
-    //             {
-    //                 $count: "totalEvents"
-    //             }
-    //         ],
-    //         errors: [
-    //             {
-    //                 $match: { log_type: "ERROR" },
-    //             },
-    //             {
-    //                 $count: "totalExceptions"
-    //             }
-    //         ],
-    //         sessionUsers: [
-    //             {
-    //                 $group: {
-    //                     _id: null,
-    //                     ID: {
-    //                         $addToSet: {
-    //                             foo_id: "$payload.session.user.userId",
-    //                             bar_id: "$payload.context.System.user.userId"
-    //                         }
-    //                     }
-    //                 }
-    //             },
-    //             {
-    //                 $project: {
-    //                     ID: {
-    //                         $setUnion: ["$ID.foo_id", "$ID.bar_id"]
-    //                     },
-    //                     _id: 0
-    //                 }
-    //             },
-    //             {
-    //                 $project: {
-    //                     ID: {
-    //                         $filter: { input: "$ID", as: "id", cond: { $ne: [{ $type: "$$id" }, "undefined"] } }
-    //                     }
-    //                 }
-    //             },
-    //             {
-    //                 $project: {
-    //                     _id: 0,
-    //                     totalUsers: { $size: "$ID" }
-    //                 }
-    //             }
-    //         ]
-    //     }
-    // });
+    aggregation.push({
+        $facet: {
+            records: [
+                {
+                    $group: { _id: "$transaction_id" }
+                },
+                {
+                    $count: "totalEvents"
+                }
+            ],
+            errors: [
+                {
+                    $match: { log_type: "ERROR" },
+                },
+                {
+                    $count: "totalExceptions"
+                }
+            ],
+            sessionUsers: [
+                {
+                    $group: {
+                        _id: null,
+                        ID: {
+                            $addToSet: {
+                                foo_id: "$payload.session.user.userId",
+                                bar_id: "$payload.context.System.user.userId"
+                            }
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        ID: {
+                            $setUnion: ["$ID.foo_id", "$ID.bar_id"]
+                        },
+                        _id: 0
+                    }
+                },
+                {
+                    $project: {
+                        ID: {
+                            $filter: { input: "$ID", as: "id", cond: { $ne: [{ $type: "$$id" }, "undefined"] } }
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        totalUsers: { $size: "$ID" }
+                    }
+                }
+            ]
+        }
+    });
 
     let result: any = {};
+
+    let stats: SourceStats = {
+        source: sourceId,
+        stats: {
+            totalUsers: 0,
+            totalExceptions: 0,
+            totalEvents: 0
+        }
+    };
 
     return Log.aggregate(recordsAgg)
     .then(function(val: any[]) {
@@ -233,14 +242,16 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     }).then(function(val: any[]) {
         console.log(val);
         Object.assign(result, val[0]);
-        sendResult(res, result);
-        return undefined;
+        return result;
+    }).then(function(result: any) {
+        stats.stats.totalEvents = result.totalEvents;
+        stats.stats.totalExceptions = result.totalExceptions;
+        stats.stats.totalUsers = result.totalUsers;
+        sendResult(res, stats);
+        return stats;
     }).catch(function(err: Error) {
         errorOut(err, res);
-        return {
-            source: "",
-            stats: undefined
-        };
+        return stats;
     });
 
     // return Log.aggregate(aggregation)
