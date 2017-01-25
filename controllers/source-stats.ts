@@ -139,16 +139,11 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             }
         },
         {
-            $project: {
-                ID: {
-                    $filter: { input: "$ID", as: "id", cond: { $ne: [{ $type: "$$id" }, "undefined"] } }
-                }
-            }
+            $unwind: "$ID"
         },
         {
-            $project: {
-                _id: 0,
-                totalUsers: { $size: "$ID" }
+            $match: {
+                ID: { $ne: undefined }
             }
         }
     );
@@ -172,7 +167,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
         Object.assign(result, { totalExceptions: val.length });
         return Log.aggregate(usersAgg);
     }).then(function(val: any[]) {
-        Object.assign(result, val[0]);
+        Object.assign(result, { totalUsers: val.length });
         return result;
     }).then(function(result: any) {
         stats.stats.totalEvents = result.totalEvents;

@@ -41,11 +41,11 @@ const entries = createLogs(NUM);
 db.logs.insert(entries);
 
 function createLogs(numOfEntries) {
-    let logEntries = [];
-    let year = 2017;
-    let month = 0;
-    let day = 15;
-    for (let i = 0; i < numOfEntries; ++i) {
+    var logEntries = [];
+    var year = 2017;
+    var month = 0;
+    var day = 15;
+    for (var i = 0; i < numOfEntries; ++i) {
         const nextEntry = createEntry(i, () => {
             if (i > 0 && i % 100 === 0) {
                 --day;
@@ -59,7 +59,7 @@ function createLogs(numOfEntries) {
 }
 
 function createEntry(index, getDate) {
-    let type;
+    var type;
     switch (index % 3) {
         case 0:
             type = "INFO";
