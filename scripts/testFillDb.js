@@ -15,6 +15,24 @@ const intents = [
     "intent10"
 ]
 
+const sessionUsers = [
+    "amzn1.ask.account",
+    undefined,
+    "amzn1.ask.account",
+    "amzn2.ask.account",
+    undefined,
+    "amzn2.ask.account"
+]
+
+const contextUsers = [
+    undefined,
+    "amzn1.ask.account",
+    "amzn1.ask.account",
+    undefined,
+    "amzn2.ask.account",
+    "amzn2.ask.account"
+]
+
 const TYPE_REQUEST = "Request";
 const TYPE_RESPONSE = "Response";
 
@@ -55,7 +73,7 @@ function createEntry(index, getDate) {
     }
     const newStamp = getDate();
     const payloadType = (index % 2 === 0) ? TYPE_REQUEST : TYPE_RESPONSE;
-    const payload = generatePayload(payloadType);
+    const payload = generatePayload(payloadType, index);
     return {
         source: generateName(index),
         transaction_id: guid(),
@@ -66,8 +84,8 @@ function createEntry(index, getDate) {
     };
 }
 
-function generatePayload(type) {
-    return (type === TYPE_REQUEST) ? generateRequestPayload() : generateResponsePayload();
+function generatePayload(type, index) {
+    return (type === TYPE_REQUEST) ? generateRequestPayload(index) : generateResponsePayload();
 }
 
 function generateResponsePayload() {
@@ -85,7 +103,7 @@ function generateResponsePayload() {
     return payload;
 }
 
-function generateRequestPayload() {
+function generateRequestPayload(index) {
     const number = getRandomInt(0, intents.length);
     const requestType = intents[number];
     const payload = {
@@ -97,6 +115,9 @@ function generateRequestPayload() {
             timestamp: new Date()
         },
         session: {
+            user: {
+                userId: sessionUsers[index % contextUsers.length]
+            },
             attributes: {
                 STATE: "_PLAY_MODE",
                 enqueuedToken: false,
@@ -115,8 +136,10 @@ function generateRequestPayload() {
             application: {
                 applicationId: "amzn1.ask.skill.4ccfe4ca-0fb8-4bd5-94c1-bc37db8c19c1"
             },
-            user: {
-                userId: "amzn1.ask.account.AEO4K3JDJLFAKAXEZ2DXKIFQRORXFWFQJWIBUX45ZIE7MX33D64VCLQ2PLNFRVD7JQNFPA5VG2UWLQTBZOSBSYN4TN2Q7YXRCAD63HIYT7ONP3VDVIGUKI25UCPAI5V2Q6TT76QXK6YAVARRHRIX3HKZR53NV4424ENMHWT7UXZP6766T5BISALC4Z3SLT3YHEXSQYCWCLG2RIY"
+            System: {
+                user: {
+                    userId: contextUsers[index % contextUsers.length]
+                }
             }
         }
     }
