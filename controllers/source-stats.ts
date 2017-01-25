@@ -109,18 +109,12 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     recordsAgg.push(
         {
             $group: { _id: "$transaction_id" }
-        },
-        {
-            $count: "totalEvents"
         }
     );
 
     errorsAgg.push(
         {
             $match: { log_type: "ERROR" },
-        },
-        {
-            $count: "totalExceptions"
         }
     );
 
@@ -172,15 +166,12 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 
     return Log.aggregate(recordsAgg)
     .then(function(val: any[]) {
-        console.log(val);
-        Object.assign(result, val[0]);
+        Object.assign(result, { totalEvents: val.length });
         return Log.aggregate(errorsAgg);
     }).then(function(val: any[]) {
-        console.log(val);
-        Object.assign(result, val[0]);
+        Object.assign(result, { totalExceptions: val.length });
         return Log.aggregate(usersAgg);
     }).then(function(val: any[]) {
-        console.log(val);
         Object.assign(result, val[0]);
         return result;
     }).then(function(result: any) {
