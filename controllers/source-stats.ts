@@ -102,75 +102,160 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
         $match: query
     });
 
-    // Using facet aggregation to put all the stats together by one.
-    aggregation.push({
-        $facet: {
-            records: [
-                {
-                    $group: { _id: "$transaction_id" }
-                },
-                {
-                    $count: "totalEvents"
-                }
-            ],
-            errors: [
-                {
-                    $match: { log_type: "ERROR" },
-                },
-                {
-                    $count: "totalExceptions"
-                }
-            ],
-            sessionUsers: [
-                {
-                    $group: {
-                        _id: null,
-                        ID: {
-                            $addToSet: {
-                                foo_id: "$payload.session.user.userId",
-                                bar_id: "$payload.context.System.user.userId"
-                            }
-                        }
-                    }
-                },
-                {
-                    $project: {
-                        ID: {
-                            $setUnion: ["$ID.foo_id", "$ID.bar_id"]
-                        },
-                        _id: 0
-                    }
-                },
-                {
-                    $project: {
-                        ID: {
-                            $filter: {input: "$ID", as: "id", cond: { $ne: [ {$type: "$$id"}, "undefined" ]}}
-                        }
-                    }
-                },
-                {
-                    $project: {
-                        _id: 0,
-                        totalUsers: { $size: "$ID" }
-                    }
-                }
-            ]
+    const recordsAgg: any[] = aggregation.slice();
+    const errorsAgg: any[] = aggregation.slice();
+    const usersAgg: any[] = aggregation.slice();
+
+    recordsAgg.push(
+        {
+            $group: { _id: "$transaction_id" }
+        },
+        {
+            $count: "totalEvents"
         }
+    );
+
+    errorsAgg.push(
+        {
+            $match: { log_type: "ERROR" },
+        },
+        {
+            $count: "totalExceptions"
+        }
+    );
+
+    usersAgg.push(
+        {
+            $group: {
+                _id: null,
+                ID: {
+                    $addToSet: {
+                        foo_id: "$payload.session.user.userId",
+                        bar_id: "$payload.context.System.user.userId"
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                ID: {
+                    $setUnion: ["$ID.foo_id", "$ID.bar_id"]
+                },
+                _id: 0
+            }
+        },
+        {
+            $project: {
+                ID: {
+                    $filter: { input: "$ID", as: "id", cond: { $ne: [{ $type: "$$id" }, "undefined"] } }
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                totalUsers: { $size: "$ID" }
+            }
+        }
+    );
+
+    console.log(recordsAgg);
+    console.log(errorsAgg);
+    console.log(usersAgg);
+
+    // Using facet aggregation to put all the stats together by one.
+    // aggregation.push({
+    //     $facet: {
+    //         records: [
+    //             {
+    //                 $group: { _id: "$transaction_id" }
+    //             },
+    //             {
+    //                 $count: "totalEvents"
+    //             }
+    //         ],
+    //         errors: [
+    //             {
+    //                 $match: { log_type: "ERROR" },
+    //             },
+    //             {
+    //                 $count: "totalExceptions"
+    //             }
+    //         ],
+    //         sessionUsers: [
+    //             {
+    //                 $group: {
+    //                     _id: null,
+    //                     ID: {
+    //                         $addToSet: {
+    //                             foo_id: "$payload.session.user.userId",
+    //                             bar_id: "$payload.context.System.user.userId"
+    //                         }
+    //                     }
+    //                 }
+    //             },
+    //             {
+    //                 $project: {
+    //                     ID: {
+    //                         $setUnion: ["$ID.foo_id", "$ID.bar_id"]
+    //                     },
+    //                     _id: 0
+    //                 }
+    //             },
+    //             {
+    //                 $project: {
+    //                     ID: {
+    //                         $filter: { input: "$ID", as: "id", cond: { $ne: [{ $type: "$$id" }, "undefined"] } }
+    //                     }
+    //                 }
+    //             },
+    //             {
+    //                 $project: {
+    //                     _id: 0,
+    //                     totalUsers: { $size: "$ID" }
+    //                 }
+    //             }
+    //         ]
+    //     }
+    // });
+
+    let result: any = {};
+
+    return Log.aggregate(recordsAgg)
+    .then(function(val: any[]) {
+        console.log(val);
+        Object.assign(result, val[0]);
+        return Log.aggregate(errorsAgg);
+    }).then(function(val: any[]) {
+        console.log(val);
+        Object.assign(result, val[0]);
+        return Log.aggregate(usersAgg);
+    }).then(function(val: any[]) {
+        console.log(val);
+        Object.assign(result, val[0]);
+        sendResult(res, result);
+        return undefined;
+    }).catch(function(err: Error) {
+        errorOut(err, res);
+        return {
+            source: "",
+            stats: undefined
+        };
     });
 
-    return Log.aggregate(aggregation)
-        .then(function (val: any[]): SourceStats {
-            const record: any = val[0];
-            const stats: SourceStats = processRecord(sourceId, record);
-            sendResult(res, stats);
-            return stats;
-        }).catch(function (err: Error) {
-            errorOut(err, res);
-            return {
-                source: "",
-                stats: undefined
-            };
-        });
+    // return Log.aggregate(aggregation)
+    //     .then(function (val: any[]): SourceStats {
+    //         const record: any = val[0];
+    //         const stats: SourceStats = processRecord(sourceId, record);
+    //         sendResult(res, stats);
+    //         return stats;
+    //     }).catch(function (err: Error) {
+    //         errorOut(err, res);
+    //         return {
+    //             source: "",
+    //             stats: undefined
+    //         };
+    //     });
 }
 
 function processRecord(sourceId: string, record: any): SourceStats {
