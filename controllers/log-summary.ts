@@ -102,12 +102,7 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
     return Log.aggregate(aggregation)
         .then(function (results: any[]): TimeBucket[] {
             return results.map(function (value: any, index: number, array: any[]): TimeBucket {
-                // The month parameter starts at 0 index where-as the query starts at 1.  So subtract 1.
-                const timeBucket: TimeBucket = {
-                    date: new Date(value._id.year, value._id.month - 1, value._id.day, 0, 0, 0, 0),
-                    count: value.count
-                };
-                return timeBucket;
+                return new ParsedTimeBucket(value);
             });
         }).then(function (buckets: TimeBucket[]): TimeSummary {
             const timeSummary: TimeSummary = {
@@ -169,4 +164,19 @@ function getSort(reqQuer: any): any {
         }
     }
     return value;
+}
+
+class ParsedTimeBucket implements TimeBucket {
+    date: Date;
+    count: number;
+
+    constructor(value: any) {
+        // The month parameter starts at 0 index where-as the query starts at 1.  So subtract 1.
+        this.date = new Date(value._id.year, value._id.month - 1, value._id.day, 0, 0, 0, 0),
+        this.count = value.count;
+
+        if (value._id.hour) {
+            this.date.setHours(value._id.hour);
+        }
+    }
 }
