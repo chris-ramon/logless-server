@@ -176,7 +176,7 @@ class ParsedTimeBucket implements TimeBucket {
         this.count = value.count;
 
         if (value._id.hour) {
-            this.date.setHours(value._id.hour);
+            this.date.setHours(value._id.hour - 1);
         }
     }
 }

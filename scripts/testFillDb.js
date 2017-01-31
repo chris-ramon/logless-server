@@ -51,7 +51,7 @@ function createLogs(numOfEntries) {
             if (i > 0 && i % 100 === 0) {
                 --day;
             }
-            if (i > 0 && i % 24 === 0) {
+            if (i > 0 && i % 25 === 0) {
                 hour = ++hour % 24;
             }
             return new Date(year, month, day, hour);
