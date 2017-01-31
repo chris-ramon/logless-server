@@ -89,9 +89,12 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
     });
 
     if (reqQuer.date_sort) {
-        aggregation.push({
-            $sort: getSort(reqQuer)
-        });
+        const query = getSort(reqQuer);
+        if (query) {
+            aggregation.push({
+                $sort: getSort(reqQuer)
+            });
+        }
     }
 
     return Log.aggregate(aggregation)
@@ -168,7 +171,7 @@ class ParsedTimeBucket implements TimeBucket {
     constructor(value: any) {
         // The month parameter starts at 0 index where-as the query starts at 1.  So subtract 1.
         this.date = new Date(value._id.year, value._id.month - 1, value._id.day, 0, 0, 0, 0),
-        this.count = value.count;
+            this.count = value.count;
 
         if (value._id.hour) {
             this.date.setHours(value._id.hour - 1);
