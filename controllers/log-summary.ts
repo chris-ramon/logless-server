@@ -85,34 +85,14 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
     });
 
     aggregation.push({
-        $group: {
-            _id: {
-                month: { $month: "$timestamp" },
-                day: { $dayOfMonth: "$timestamp" },
-                year: { $year: "$timestamp" }
-            },
-            count: {
-                $sum: 1
-            }
-        }
+        $group: getGroup(reqQuer)
     });
 
     if (reqQuer.date_sort) {
-        if (reqQuer.date_sort === "asc") {
+        const query = getSort(reqQuer);
+        if (query) {
             aggregation.push({
-                $sort: {
-                    "_id.year": 1,
-                    "_id.month": 1,
-                    "_id.day": 1
-                }
-            });
-        } else if (reqQuer.date_sort === "desc") {
-            aggregation.push({
-                $sort: {
-                    "_id.year": -1,
-                    "_id.month": -1,
-                    "_id.day": -1
-                }
+                $sort: getSort(reqQuer)
             });
         }
     }
@@ -120,12 +100,7 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
     return Log.aggregate(aggregation)
         .then(function (results: any[]): TimeBucket[] {
             return results.map(function (value: any, index: number, array: any[]): TimeBucket {
-                // The month parameter starts at 0 index where-as the query starts at 1.  So subtract 1.
-                const timeBucket: TimeBucket = {
-                    date: new Date(value._id.year, value._id.month - 1, value._id.day, 0, 0, 0, 0),
-                    count: value.count
-                };
-                return timeBucket;
+                return new ParsedTimeBucket(value);
             });
         }).then(function (buckets: TimeBucket[]): TimeSummary {
             const timeSummary: TimeSummary = {
@@ -146,4 +121,60 @@ function sendOut(summary: TimeSummary, response: Response) {
 function errorOut(error: Error, response: Response) {
     Console.info("Error getting logs summary: " + error.message);
     response.status(400).send(error.message);
+}
+
+function getGroup(reqQuer: any): any {
+    const base = {
+        _id: {
+            month: { $month: "$timestamp" },
+            day: { $dayOfMonth: "$timestamp" },
+            year: { $year: "$timestamp" }
+        },
+        count: {
+            $sum: 1
+        }
+    };
+
+    if (reqQuer.granularity === "hour") {
+        base._id = Object.assign(base._id, { hour: { $hour: "$timestamp" } });
+    }
+
+    return base;
+}
+
+function getSort(reqQuer: any): any {
+    let sortVal: number = undefined;
+    if (reqQuer.date_sort === "asc") {
+        sortVal = 1;
+    } else if (reqQuer.date_sort === "desc") {
+        sortVal = -1;
+    };
+
+    let value = (sortVal) ? {
+        "_id.year": sortVal,
+        "_id.month": sortVal,
+        "_id.day": sortVal
+    } : undefined;
+
+    if (value) {
+        if (reqQuer.granularity === "hour") {
+            value = Object.assign(value, { "_id.hour": sortVal });
+        }
+    }
+    return value;
+}
+
+class ParsedTimeBucket implements TimeBucket {
+    date: Date;
+    count: number;
+
+    constructor(value: any) {
+        // The month parameter starts at 0 index where-as the query starts at 1.  So subtract 1.
+        this.date = new Date(value._id.year, value._id.month - 1, value._id.day, 0, 0, 0, 0),
+            this.count = value.count;
+
+        if (value._id.hour) {
+            this.date.setHours(value._id.hour - 1);
+        }
+    }
 }
