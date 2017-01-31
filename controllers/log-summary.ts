@@ -142,7 +142,7 @@ function getGroup(reqQuer: any): any {
     };
 
     if (reqQuer.granularity === "hour") {
-        base._id = Object.assign(base._id, { hour: { $hour: "$timestamp" }});
+        base._id = Object.assign(base._id, { hour: { $hour: "$timestamp" } });
     }
 
     return base;
