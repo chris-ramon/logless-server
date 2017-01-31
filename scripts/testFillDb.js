@@ -45,12 +45,16 @@ function createLogs(numOfEntries) {
     var year = 2017;
     var month = 0;
     var day = 15;
+    var hour = 0;
     for (var i = 0; i < numOfEntries; ++i) {
         const nextEntry = createEntry(i, () => {
             if (i > 0 && i % 100 === 0) {
                 --day;
             }
-            return new Date(year, month, day);
+            if (i > 0 && i % 24 === 0) {
+                hour = ++hour % 24;
+            }
+            return new Date(year, month, day, hour);
         });
 
         logEntries.push(nextEntry);
