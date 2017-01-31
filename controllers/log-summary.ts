@@ -94,11 +94,6 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
         });
     }
 
-    console.log(aggregation);
-    console.log(aggregation[0]);
-    console.log(aggregation[1]);
-    console.log(aggregation[2]);
-
     return Log.aggregate(aggregation)
         .then(function (results: any[]): TimeBucket[] {
             return results.map(function (value: any, index: number, array: any[]): TimeBucket {
