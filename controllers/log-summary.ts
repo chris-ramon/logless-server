@@ -120,8 +120,9 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
     return Log.aggregate(aggregation)
         .then(function (results: any[]): TimeBucket[] {
             return results.map(function (value: any, index: number, array: any[]): TimeBucket {
+                // The month parameter starts at 0 index where-as the query starts at 1.  So subtract 1.
                 const timeBucket: TimeBucket = {
-                    date: new Date(value._id.year, value._id.month, value._id.day, 0, 0, 0, 0),
+                    date: new Date(value._id.year, value._id.month - 1, value._id.day, 0, 0, 0, 0),
                     count: value.count
                 };
                 return timeBucket;
