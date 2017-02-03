@@ -168,7 +168,7 @@ describe("Log time summary", function () {
                 const startDate: moment.Moment = moment([2017, 0, 14]);
                 const endDate: moment.Moment = moment([2017, 0, 15]);
 
-                const buckets: TimeBucket[] = fillGap(startDate, endDate);
+                const buckets: TimeBucket[] = fillGap(startDate, endDate, "hour");
 
                 expect(buckets).to.have.length(24); // It won't include the end.
 
@@ -185,7 +185,7 @@ describe("Log time summary", function () {
                 const startDate: moment.Moment = moment([2017, 0, 15]);
                 const endDate: moment.Moment = moment([2017, 0, 14]);
 
-                const buckets: TimeBucket[] = fillGap(startDate, endDate);
+                const buckets: TimeBucket[] = fillGap(startDate, endDate, "hour");
 
                 expect(buckets).to.have.length(24); // It won't include the end.
 
@@ -202,7 +202,7 @@ describe("Log time summary", function () {
                 const startDate: moment.Moment = moment([2017, 0, 15]);
                 const endDate: moment.Moment = moment([2017, 0, 15]);
 
-                const buckets: TimeBucket[] = fillGap(startDate, endDate);
+                const buckets: TimeBucket[] = fillGap(startDate, endDate, "hour");
 
                 expect(buckets).to.be.empty;
             });
@@ -210,7 +210,7 @@ describe("Log time summary", function () {
             it ("Tests nothign is returned when the \"from\" parameter is undefined.", function() {
                 const endDate: moment.Moment = moment([2017, 0, 15]);
 
-                const buckets: TimeBucket[] = fillGap(undefined, endDate);
+                const buckets: TimeBucket[] = fillGap(undefined, endDate, "hour");
 
                 expect(buckets).to.be.empty;
             });
@@ -218,7 +218,7 @@ describe("Log time summary", function () {
             it ("Tests nothign is returned when the \"to\" parameter is undefined.", function() {
                 const endDate: moment.Moment = moment([2017, 0, 15]);
 
-                const buckets: TimeBucket[] = fillGap(endDate, undefined);
+                const buckets: TimeBucket[] = fillGap(endDate, undefined, "hour");
 
                 expect(buckets).to.be.empty;
             });
