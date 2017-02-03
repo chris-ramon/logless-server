@@ -1,13 +1,14 @@
 import * as Chai from "chai";
+import * as moment from "moment";
 import * as Sinon from "sinon";
 import * as SinonChai from "sinon-chai";
 
 import { Request, Response } from "express";
 
 import Log from "../../lib/log";
-import { TimeSummary } from "../../lib/time-bucket";
+import { TimeBucket, TimeSummary } from "../../lib/time-bucket";
 
-import logSummary from "../../controllers/log-summary";
+import logSummary, { fillGap, fillGaps } from "../../controllers/log-summary";
 
 
 Chai.use(SinonChai);
@@ -160,6 +161,122 @@ describe("Log time summary", function () {
         });
     });
 
+    describe("Fill gaps", function () {
+        describe("function \"fillGap\"", function () {
+
+            it("Tests the gaps are fill in between the two dates that are increasing.", function () {
+                const startDate: moment.Moment = moment([2017, 0, 14]);
+                const endDate: moment.Moment = moment([2017, 0, 15]);
+
+                const buckets: TimeBucket[] = fillGap(startDate, endDate);
+
+                console.log(buckets);
+                expect(buckets).to.have.length(23); // It won't include the ends.
+
+                const checkDate = moment(startDate);
+                for (let bucket of buckets) {
+                    checkDate.add(1, "hour");
+                    expect(bucket.count).to.equals(0);
+                    expect(bucket.date).to.equalDate(checkDate.toDate());
+                    expect(bucket.date).to.equalTime(checkDate.toDate());
+                }
+            });
+
+            it("Tests the gaps are fill in between the two dates that are increasing.", function () {
+                const startDate: moment.Moment = moment([2017, 0, 15]);
+                const endDate: moment.Moment = moment([2017, 0, 14]);
+
+                const buckets: TimeBucket[] = fillGap(startDate, endDate);
+
+                console.log(buckets);
+                expect(buckets).to.have.length(23); // It won't include the ends.
+
+                const checkDate = moment(startDate);
+                for (let bucket of buckets) {
+                    checkDate.subtract(1, "hour");
+                    expect(bucket.count).to.equals(0);
+                    expect(bucket.date).to.equalDate(checkDate.toDate());
+                    expect(bucket.date).to.equalTime(checkDate.toDate());
+                }
+            });
+
+            it("Tests the gaps are not filled when dates are equal.", function () {
+                const startDate: moment.Moment = moment([2017, 0, 15]);
+                const endDate: moment.Moment = moment([2017, 0, 15]);
+
+                const buckets: TimeBucket[] = fillGap(startDate, endDate);
+
+                console.log(buckets);
+                expect(buckets).to.have.length(0);
+            });
+        });
+
+        describe("function \"fillGaps\"", function () {
+            it("Tests the gaps are filled between the three buckets while increasing", function () {
+                const summary: TimeSummary = dummySummary(10, true);
+
+                const currentDay: moment.Moment = moment(summary.buckets[0].date);
+                return fillGaps(summary).then(function (newSummary: TimeSummary) {
+                    let j = 0;
+                    for (let i = 0; i < newSummary.buckets.length; i++) {
+                        // The day should be every 24 hours.
+                        if (i % 24 === 0) {
+                            expect(summary.buckets[j]).to.deep.equal(newSummary.buckets[i]);
+                            ++j;
+                        } else {
+                            expect(newSummary.buckets[i].date).to.equalDate(currentDay.toDate());
+                            expect(newSummary.buckets[i].count).to.equal(0);
+                        }
+                        currentDay.add(1, "hours");
+                    }
+                });
+            });
+
+            it("Tests the gaps are filled between the three buckets while decreasing", function () {
+                const summary: TimeSummary = dummySummary(10, false);
+
+                const currentDay: moment.Moment = moment(summary.buckets[0].date);
+                return fillGaps(summary).then(function (newSummary: TimeSummary) {
+                    let j = 0;
+                    for (let i = 0; i < newSummary.buckets.length; i++) {
+                        // The day should be every 24 hours.
+                        if (i % 24 === 0) {
+                            expect(summary.buckets[j]).to.deep.equal(newSummary.buckets[i]);
+                            ++j;
+                        } else {
+                            expect(newSummary.buckets[i].date).to.equalDate(currentDay.toDate());
+                            expect(newSummary.buckets[i].count).to.equal(0);
+                        }
+                        currentDay.subtract(1, "hours");
+                    }
+                });
+            });
+
+            it("Tests the TimeSummary does not get updated.", function () {
+                const firstBucket: TimeBucket = { date: moment([2017, 0, 15]).toDate(), count: 100 };
+                const secondBucket: TimeBucket = { date: moment([2017, 0, 16]).toDate(), count: 200 };
+                const summary: TimeSummary = { buckets: [firstBucket, secondBucket] };
+
+                return fillGaps(summary).then(function (newSummary: TimeSummary) {
+                    expect(summary.buckets).to.have.length(2);
+                    expect(summary).to.not.deep.equal(newSummary);
+                    expect(summary.buckets[0].date).to.equalDate(firstBucket.date);
+                    expect(summary.buckets[0].count).to.equal(firstBucket.count);
+                    expect(summary.buckets[1].date).to.equalDate(secondBucket.date);
+                    expect(summary.buckets[1].count).to.equal(secondBucket.count);
+                });
+            });
+
+            it ("Tests that no bucket is filled when there are no buckets in summary.", function() {
+                const summary: TimeSummary = dummySummary(0, true);
+
+                return fillGaps(summary).then(function (newSummary: TimeSummary) {
+                    expect(newSummary.buckets).to.have.length(0);
+                });
+            });
+        });
+    });
+
     describe("Unsuccessful queries.", function () {
         before(function () {
             logAggregate = Sinon.stub(Log, "aggregate").returns(Promise.reject(new Error("Errror thrown per requirement of the test.")));
@@ -207,4 +324,24 @@ function dummyAggregates(num: number): Aggregate[] {
         });
     }
     return aggs;
+}
+
+function dummySummary(num: number, increasing: boolean): TimeSummary {
+    const summary: TimeSummary = {
+        buckets: []
+    };
+
+    const date: moment.Moment = moment([2017, 0, 15]);
+    for (let i = 0; i < num; ++i) {
+        summary.buckets.push({
+            date: date.toDate(),
+            count: 100
+        });
+        if (increasing) {
+            date.add(1, "days");
+        } else {
+            date.subtract(1, "days");
+        }
+    }
+    return summary;
 }
