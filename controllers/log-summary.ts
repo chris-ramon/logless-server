@@ -1,6 +1,7 @@
 /**
  * Created by chrsdietz on 01/16/16.
  */
+import * as moment from "moment";
 import { Request, Response } from "express";
 
 import { getDateRange } from "./query-utils";
@@ -68,7 +69,7 @@ import Console from "../lib/console-utils";
  *               type: object
  */
 export default function (req: Request, res: Response): Promise<TimeSummary> {
-    const reqQuer = Object.assign({}, req.query);
+    const reqQuer = Object.assign({}, req.query) as TimeQuery;
 
     const query = {};
 
@@ -88,14 +89,19 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
         $group: getGroup(reqQuer)
     });
 
+    let isSorted: boolean = false;
     if (reqQuer.date_sort) {
         const query = getSort(reqQuer);
         if (query) {
+            isSorted = true;
             aggregation.push({
                 $sort: getSort(reqQuer)
             });
         }
     }
+
+    console.info("isSorted = " + isSorted + " " + reqQuer.fill_gaps);
+    const shouldFillGaps = (reqQuer.fill_gaps !== undefined) ? isSorted : false;
 
     return Log.aggregate(aggregation)
         .then(function (results: any[]): TimeBucket[] {
@@ -106,6 +112,16 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
             const timeSummary: TimeSummary = {
                 buckets: buckets
             };
+            return timeSummary;
+        }).then(function (timeSummary: TimeSummary) {
+            console.info("fill gapes = " + shouldFillGaps);
+            if (shouldFillGaps) {
+                return fillGaps(timeSummary);
+            } else {
+                console.info("not filling");
+                return timeSummary;
+            }
+        }).then(function (timeSummary: TimeSummary) {
             sendOut(timeSummary, res);
             return timeSummary;
         }).catch(function (err: Error) {
@@ -123,7 +139,7 @@ function errorOut(error: Error, response: Response) {
     response.status(400).send(error.message);
 }
 
-function getGroup(reqQuer: any): any {
+function getGroup(reqQuer: TimeQuery): any {
     const base = {
         _id: {
             month: { $month: "$timestamp" },
@@ -142,7 +158,7 @@ function getGroup(reqQuer: any): any {
     return base;
 }
 
-function getSort(reqQuer: any): any {
+function getSort(reqQuer: TimeQuery): any {
     let sortVal: number = undefined;
     if (reqQuer.date_sort === "asc") {
         sortVal = 1;
@@ -162,6 +178,90 @@ function getSort(reqQuer: any): any {
         }
     }
     return value;
+}
+
+function fillGaps(summary: TimeSummary): Promise<TimeSummary> {
+    const buckets = summary.buckets;
+    if (buckets.length === 0) {
+        return Promise.resolve(summary);
+    }
+
+    let bucketCopy = buckets.slice();
+    let bucketDate = moment(buckets[0].date);
+    let currentDate = bucketDate.clone().startOf("day");
+    // let lastDate = moment(); // now
+    let copyIndex = 0;
+
+    const max = bucketCopy.length;
+
+    console.info("_______________");
+    console.log(bucketCopy);
+    for (let i = 0; i < max; ++i) {
+        bucketDate = moment(buckets[i].date);
+        const gaps: TimeBucket[] = fillGap(currentDate, bucketDate);
+        bucketCopy.splice(copyIndex, 0, ...gaps);
+        console.info("_______________");
+        console.log(bucketCopy);
+        copyIndex += gaps.length + 1; // Skip the next one because that's where the bucket exists.
+        currentDate = bucketDate.clone().add(1, "hours");
+        console.info("next " + bucketDate.toISOString());
+    }
+
+    const newSummary: TimeSummary = Object.assign(summary, { buckets: bucketCopy });
+    return Promise.resolve(newSummary);
+}
+
+function fillGap(from: moment.Moment, to: moment.Moment): TimeBucket[] {
+    const buckets: TimeBucket[] = [];
+    const increasing: boolean = from.isSameOrBefore(to);
+    const currentDate = moment(from);
+    const end = moment(to);
+    if (increasing) {
+        end.subtract(1, "hours");
+    } else {
+        end.add(1, "hours");
+    }
+
+    console.info("Filling gap between " + currentDate.format() + " and " + to.format());
+    // const whileCheck = (increasing) ? currentDate.isSameOrBefore : currentDate.isSameOrAfter;
+    // const adjust = (increasing) ? currentDate.add : currentDate.subtract;
+
+    console.log(whileCheck);
+    console.log(adjust);
+    while (whileCheck(increasing, currentDate, to)) {
+        buckets.push({
+            date: currentDate.toDate(),
+            count: 0
+        });
+
+        adjust(increasing, currentDate);
+    }
+    return buckets;
+}
+
+function whileCheck(increasing: boolean, currentDate: moment.Moment, to: moment.Moment) {
+    if (increasing) {
+        return currentDate.isSameOrBefore(to);
+    } else {
+        return currentDate.isSameOrAfter(to);
+    }
+}
+
+function adjust(increasing: boolean, currentDate: moment.Moment) {
+    if (increasing) {
+        currentDate.add(1, "hours");
+    } else {
+        currentDate.subtract(1, "hours");
+    }
+}
+
+interface TimeQuery {
+    source: string; // source ID
+    start_time?: string; // ISO time formatted
+    end_time?: string; // ISO time formatted
+    date_sort?: "asc" | "desc";
+    granularity?: "hour" | "day";
+    fill_gaps?: boolean;
 }
 
 class ParsedTimeBucket implements TimeBucket {
