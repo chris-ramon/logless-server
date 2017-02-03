@@ -171,14 +171,14 @@ describe("Log time summary", function () {
                 const buckets: TimeBucket[] = fillGap(startDate, endDate);
 
                 console.log(buckets);
-                expect(buckets).to.have.length(23); // It won't include the ends.
+                expect(buckets).to.have.length(24); // It won't include the end.
 
                 const checkDate = moment(startDate);
                 for (let bucket of buckets) {
-                    checkDate.add(1, "hour");
                     expect(bucket.count).to.equals(0);
                     expect(bucket.date).to.equalDate(checkDate.toDate());
                     expect(bucket.date).to.equalTime(checkDate.toDate());
+                    checkDate.add(1, "hour");
                 }
             });
 
@@ -189,14 +189,14 @@ describe("Log time summary", function () {
                 const buckets: TimeBucket[] = fillGap(startDate, endDate);
 
                 console.log(buckets);
-                expect(buckets).to.have.length(23); // It won't include the ends.
+                expect(buckets).to.have.length(24); // It won't include the end.
 
                 const checkDate = moment(startDate);
                 for (let bucket of buckets) {
-                    checkDate.subtract(1, "hour");
                     expect(bucket.count).to.equals(0);
                     expect(bucket.date).to.equalDate(checkDate.toDate());
                     expect(bucket.date).to.equalTime(checkDate.toDate());
+                    checkDate.subtract(1, "hour");
                 }
             });
 
@@ -206,8 +206,23 @@ describe("Log time summary", function () {
 
                 const buckets: TimeBucket[] = fillGap(startDate, endDate);
 
-                console.log(buckets);
-                expect(buckets).to.have.length(0);
+                expect(buckets).to.be.empty;
+            });
+
+            it ("Tests nothign is returned when the \"from\" parameter is undefined.", function() {
+                const endDate: moment.Moment = moment([2017, 0, 15]);
+
+                const buckets: TimeBucket[] = fillGap(undefined, endDate);
+
+                expect(buckets).to.be.empty;
+            });
+
+            it ("Tests nothign is returned when the \"to\" parameter is undefined.", function() {
+                const endDate: moment.Moment = moment([2017, 0, 15]);
+
+                const buckets: TimeBucket[] = fillGap(endDate, undefined);
+
+                expect(buckets).to.be.empty;
             });
         });
 
@@ -272,6 +287,24 @@ describe("Log time summary", function () {
 
                 return fillGaps(summary).then(function (newSummary: TimeSummary) {
                     expect(newSummary.buckets).to.have.length(0);
+                });
+            });
+
+            it ("Fills in gaps when a date range is provided.", function() {
+                const summary: TimeSummary = dummySummary(0, true);
+                const dateRange = { start_time: moment([2017, 0, 15]), end_time: moment([2017, 0, 16])};
+
+                const checkDate = moment(dateRange.start_time);
+
+                return fillGaps(summary, dateRange).then(function (newSummary: TimeSummary) {
+                    console.log(newSummary);
+                    expect(newSummary.buckets).to.have.length(25); // Should be 25 as in all day plus the ending hour.
+
+                    for (let i = 0; i < newSummary.buckets.length; ++i) {
+                        expect(newSummary.buckets[i].date).to.equalDate(checkDate.toDate());
+                        expect(newSummary.buckets[i].count).to.equal(0);
+                        checkDate.add(1, "hour");
+                    }
                 });
             });
         });

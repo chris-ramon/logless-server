@@ -183,7 +183,9 @@ function getSort(reqQuer: TimeQuery): any {
 export function fillGaps(summary: TimeSummary, dateRange: DateRange = {}): Promise<TimeSummary> {
     const buckets = summary.buckets;
     if (buckets.length === 0) {
-        return Promise.resolve(summary);
+        const gaps: TimeBucket[] = fillGapInclusive(dateRange.start_time, dateRange.end_time);
+        const newSummary: TimeSummary = Object.assign({}, summary, { buckets: gaps });
+        return Promise.resolve(newSummary);
     }
 
     const startDate: moment.Moment = (dateRange.start_time) ? dateRange.start_time : moment(buckets[0].date);
@@ -200,6 +202,7 @@ export function fillGaps(summary: TimeSummary, dateRange: DateRange = {}): Promi
         bucketDate = moment(buckets[i].date);
 
         const gaps: TimeBucket[] = fillGap(currentDate, bucketDate);
+        gaps.shift(); // Removing the first one as it's included in the current data.
         bucketCopy.splice(copyIndex, 0, ...gaps);
 
         copyIndex += gaps.length + 1; // Skip the next one because that's where the bucket exists.
@@ -213,28 +216,47 @@ export function fillGaps(summary: TimeSummary, dateRange: DateRange = {}): Promi
     return Promise.resolve(newSummary);
 }
 
-export function fillGap(from: moment.Moment, to: moment.Moment): TimeBucket[] {
-    if (from.isSame(to)) {
+export function fillGapInclusive(from: moment.Moment, to: moment.Moment): TimeBucket[] {
+    if (errorCheck(from, to)) {
         return [];
     }
 
-    const buckets: TimeBucket[] = [];
     const increasing: boolean = from.isBefore(to);
-    const currentDate = moment(from);
+    return generateGap(increasing, from, to);
+}
+
+export function fillGap(from: moment.Moment, to: moment.Moment): TimeBucket[] {
+    if (errorCheck(from, to)) {
+        return [];
+    }
+
+    const increasing: boolean = from.isBefore(to);
     const end = moment(to);
-    console.info("Filling gap between " + currentDate.format() + " and " + to.format());
-    // It's not going to be inclusive.
     if (increasing) {
-        currentDate.add(1, "hours");
         end.subtract(1, "hours");
     } else {
-        currentDate.subtract(1, "hours");
         end.add(1, "hours");
     }
 
-    // const whileCheck = (increasing) ? currentDate.isSameOrBefore : currentDate.isSameOrAfter;
-    // const adjust = (increasing) ? currentDate.add : currentDate.subtract;
+    return generateGap(increasing, from, end);
+}
 
+function errorCheck(from: moment.Moment, to: moment.Moment): boolean {
+    if (!from) {
+        return true;
+    }
+    if (!to) {
+        return true;
+    }
+    if (from.isSame(to)) {
+        return true;
+    }
+    return false;
+}
+
+function generateGap(increasing: boolean, start: moment.Moment, end: moment.Moment): TimeBucket[] {
+    const buckets: TimeBucket[] = [];
+    const currentDate = moment(start);
     while (whileCheck(increasing, currentDate, end)) {
         buckets.push({
             date: currentDate.toDate(),
