@@ -8,7 +8,6 @@ import { getDateRange } from "./query-utils";
 
 import Log from "../lib/log";
 import { TimeBucket, TimeSummary } from "../lib/time-bucket";
-import Console from "../lib/console-utils";
 
 /**
  * @swagger
@@ -100,7 +99,6 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
         }
     }
 
-    console.info("isSorted = " + isSorted + " " + reqQuer.fill_gaps);
     const shouldFillGaps = (reqQuer.fill_gaps !== undefined) ? isSorted : false;
 
     return Log.aggregate(aggregation)
@@ -114,11 +112,9 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
             };
             return timeSummary;
         }).then(function (timeSummary: TimeSummary) {
-            console.info("fill gapes = " + shouldFillGaps);
             if (shouldFillGaps) {
                 return fillGaps(timeSummary);
             } else {
-                console.info("not filling");
                 return timeSummary;
             }
         }).then(function (timeSummary: TimeSummary) {
@@ -135,7 +131,6 @@ function sendOut(summary: TimeSummary, response: Response) {
 }
 
 function errorOut(error: Error, response: Response) {
-    Console.info("Error getting logs summary: " + error.message);
     response.status(400).send(error.message);
 }
 

@@ -170,7 +170,6 @@ describe("Log time summary", function () {
 
                 const buckets: TimeBucket[] = fillGap(startDate, endDate);
 
-                console.log(buckets);
                 expect(buckets).to.have.length(24); // It won't include the end.
 
                 const checkDate = moment(startDate);
@@ -188,7 +187,6 @@ describe("Log time summary", function () {
 
                 const buckets: TimeBucket[] = fillGap(startDate, endDate);
 
-                console.log(buckets);
                 expect(buckets).to.have.length(24); // It won't include the end.
 
                 const checkDate = moment(startDate);
@@ -320,7 +318,6 @@ describe("Log time summary", function () {
 
                     const max = newSummary.buckets.length;
                     const maxMinusOne = max - 1;
-                    console.log(newSummary);
                     for (let i = 0; i < max; ++i) {
                         expect(newSummary.buckets[i].date).to.equalDate(checkDate.toDate());
                         if (i > 0 && i < maxMinusOne && i % 24 === 0) {
