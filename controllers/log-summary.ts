@@ -188,18 +188,33 @@ export function fillGaps(summary: TimeSummary, dateRange: DateRange = {}): Promi
         return Promise.resolve(newSummary);
     }
 
-    const startDate: moment.Moment = (dateRange.start_time) ? dateRange.start_time : moment(buckets[0].date);
-    const endDate: moment.Moment = (dateRange.end_time) ? dateRange.end_time : moment(buckets[buckets.length - 1].date);
+    const firstBucketDate = moment(buckets[0].date);
+    const lastBucketDate = moment(buckets[buckets.length - 1].date);
+
+    let startDate: moment.Moment = firstBucketDate;
+    if (dateRange.start_time) {
+        startDate = dateRange.start_time;
+        const increasing = startDate.isBefore(firstBucketDate);
+        if (increasing) {
+            startDate.subtract(1, "hours");
+        } else {
+            startDate.add(1, "hours");
+        }
+    }
+
+    let endDate: moment.Moment = lastBucketDate;
+    if (dateRange.end_time) {
+        endDate = dateRange.end_time;
+    }
 
     let bucketCopy = buckets.slice();
-    let bucketDate = moment(startDate);
-    let currentDate = bucketDate.clone().startOf("day");
+    let currentDate = startDate.clone();
     let copyIndex = 0;
 
     const max = bucketCopy.length;
 
     for (let i = 0; i < max; ++i) {
-        bucketDate = moment(buckets[i].date);
+        const bucketDate = moment(buckets[i].date);
 
         const gaps: TimeBucket[] = fillGap(currentDate, bucketDate);
         gaps.shift(); // Removing the first one as it's included in the current data.
@@ -209,8 +224,9 @@ export function fillGaps(summary: TimeSummary, dateRange: DateRange = {}): Promi
         currentDate = bucketDate;
     }
 
-    const remaining: TimeBucket[] = fillGap(currentDate, endDate);
-    bucketCopy.concat(remaining);
+    const remaining: TimeBucket[] = fillGapInclusive(currentDate, endDate);
+    remaining.shift();
+    bucketCopy = bucketCopy.concat(remaining);
 
     const newSummary: TimeSummary = Object.assign({}, summary, { buckets: bucketCopy });
     return Promise.resolve(newSummary);

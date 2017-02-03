@@ -290,19 +290,44 @@ describe("Log time summary", function () {
                 });
             });
 
-            it ("Fills in gaps when a date range is provided.", function() {
+            it ("Fills in gaps when a date range is provided and summary is empty.", function() {
                 const summary: TimeSummary = dummySummary(0, true);
                 const dateRange = { start_time: moment([2017, 0, 15]), end_time: moment([2017, 0, 16])};
 
                 const checkDate = moment(dateRange.start_time);
 
                 return fillGaps(summary, dateRange).then(function (newSummary: TimeSummary) {
-                    console.log(newSummary);
                     expect(newSummary.buckets).to.have.length(25); // Should be 25 as in all day plus the ending hour.
 
                     for (let i = 0; i < newSummary.buckets.length; ++i) {
                         expect(newSummary.buckets[i].date).to.equalDate(checkDate.toDate());
                         expect(newSummary.buckets[i].count).to.equal(0);
+                        checkDate.add(1, "hour");
+                    }
+                });
+            });
+
+            it ("Fills in gaps on ends when summary is provided.", function() {
+                const summary: TimeSummary = dummySummary(2, true);
+                const firstDate: moment.Moment = moment(summary.buckets[0].date).subtract(1, "days");
+                const lastDate: moment.Moment = moment(summary.buckets[summary.buckets.length - 1].date).add(1, "days");
+                const dateRange = { start_time: firstDate, end_time: lastDate};
+
+                const checkDate = moment(firstDate);
+
+                return fillGaps(summary, dateRange).then(function (newSummary: TimeSummary) {
+                    expect(newSummary.buckets).to.have.length(3 * 24 + 1); // Day before, day between, day after plus the hour that we started.
+
+                    const max = newSummary.buckets.length;
+                    const maxMinusOne = max - 1;
+                    console.log(newSummary);
+                    for (let i = 0; i < max; ++i) {
+                        expect(newSummary.buckets[i].date).to.equalDate(checkDate.toDate());
+                        if (i > 0 && i < maxMinusOne && i % 24 === 0) {
+                            expect(newSummary.buckets[i].count).to.equal(100);
+                        } else {
+                            expect(newSummary.buckets[i].count).to.equal(0);
+                        }
                         checkDate.add(1, "hour");
                     }
                 });
