@@ -99,8 +99,8 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
         }
     }
 
-    const shouldFillGaps = (reqQuer.fill_gaps !== undefined) ? isSorted : false;
-
+    const shouldFillGaps: boolean = (reqQuer.fill_gaps !== undefined) ? isSorted : false;
+    const gran: Granularity = (reqQuer.granularity === "hour") ? "hour" : "day";
 
     return Log.aggregate(aggregation)
         .then(function (results: any[]): TimeBucket[] {
@@ -114,7 +114,7 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
             return timeSummary;
         }).then(function (timeSummary: TimeSummary) {
             if (shouldFillGaps) {
-                return fillGaps(timeSummary, dateRange(reqQuer), granularity(reqQuer, "hour"));
+                return fillGaps(timeSummary, dateRange(reqQuer), granularity(reqQuer, gran));
             } else {
                 return timeSummary;
             }
