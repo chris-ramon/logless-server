@@ -18,6 +18,7 @@ describe("Time Bucket Tests", function () {
     it("Tests the dates are sorted in to respective time buckets by day.", function () {
         let items: Item[] = [];
         let date: Date = new Date();
+        date.setDate(20);
         for (let i = 0; i < 10; i++) {
             for (let j = i; j < 10; j++) {
                 const newItem = new Item(new Date(date.toISOString()));
