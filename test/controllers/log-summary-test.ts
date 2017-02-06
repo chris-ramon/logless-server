@@ -399,11 +399,10 @@ describe("Log time summary", function () {
             describe("Days Granularity", function () {
                 it("Tests the gaps are filled between the three buckets while increasing", function () {
                     const summary: TimeSummary = dummySummary(10, true, 5);
-                    console.log(summary);
+
                     const currentDay: moment.Moment = moment(summary.buckets[0].date);
                     return fillGaps(summary, {}, "day").then(function (newSummary: TimeSummary) {
 
-                        console.log(newSummary);
                         expect(newSummary.buckets).to.have.length(10 + 4 * 9); // original 10 + the 4 between each which are 9 gaps.
 
                         let j = 0;

@@ -273,7 +273,6 @@ export function fillGap(from: moment.Moment, to: moment.Moment, granularity: Gra
         return [];
     }
 
-    console.info("Filling gaps + " + granularity);
     const increasing: boolean = from.isBefore(to);
     const end = moment(to);
     if (increasing) {
