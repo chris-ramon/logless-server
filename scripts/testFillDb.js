@@ -3,13 +3,13 @@
 const NUM = 10000;
 
 const intents = [
-    "intent1",
+    "IntentRequest",
     "intent2",
     "intent3",
-    "intent4",
+    "IntentRequest",
     "intent5",
     "intent6",
-    "intent7",
+    "IntentRequest",
     "intent8",
     "intent9",
     "intent10"
