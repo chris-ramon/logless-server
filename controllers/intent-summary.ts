@@ -72,7 +72,11 @@ export default function (req: Request, res: Response): Promise<CountResult> {
     const reqQuer = Object.assign({}, req.query) as ReqQuer;
 
     const query: any = {
-        "payload.request": { $exists: true }
+        $or: [{
+            "payload.request": { $exists: true } // Amazon Alexa
+        }, {
+            "payload.result": { $exists: true } // Google Home
+        }]
     };
 
     getDateRange(req, query);
@@ -91,15 +95,24 @@ export default function (req: Request, res: Response): Promise<CountResult> {
         $match: query
     });
 
-    // Group by the request type in the payload and count the number.
     aggregation.push({
         $group: {
             _id: {
-                $cond: [{
-                    $eq: ["$payload.request.type", "IntentRequest"]
-                }, "$payload.request.intent.name", "$payload.request.type"]
+                $switch: {
+                    branches: [{
+                        case: { $eq: ["$payload.request.type", "IntentRequest"] }, // Alexa custom actions.
+                        then: "$payload.request.intent.name"
+                    }, {
+                        case: { $ne: [{ $type: "$payload.request.type" }, "missing"] }, // Alexa actions.
+                        then: "$payload.request.type"
+                    }, {
+                        case: { $ne: [{ $type: "$payload.result.action" }, "missing"] }, // Google actions.
+                        then: "$payload.result.action"
+                    }],
+                    default: "remaining" // Default Alexa actions.
+                }
             },
-            origin: { $addToSet: "$payload.request.type"},
+            origin: { $addToSet: { $ifNull: [ "$payload.result.action", "$payload.request.type" ] } },
             count: { $sum: 1 }
         }
     });
