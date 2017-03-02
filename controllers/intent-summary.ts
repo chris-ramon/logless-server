@@ -98,18 +98,22 @@ export default function (req: Request, res: Response): Promise<CountResult> {
     aggregation.push({
         $group: {
             _id: {
-                $switch: {
-                    branches: [{
-                        case: { $eq: ["$payload.request.type", "IntentRequest"] }, // Alexa custom actions.
-                        then: "$payload.request.intent.name"
-                    }, {
-                        case: { $ne: [{ $type: "$payload.request.type" }, "missing"] }, // Alexa actions.
-                        then: "$payload.request.type"
-                    }, {
-                        case: { $ne: [{ $type: "$payload.result.action" }, "missing"] }, // Google actions.
-                        then: "$payload.result.action"
-                    }],
-                    default: "remaining" // Something we don't know yet.
+                $cond: {
+                    if: { $eq: ["$payload.request.type", "IntentRequest"] },
+                    then: "$payload.request.intent.name",
+                    else: {
+                        $cond: {
+                            if: { $ne: [{ $type: "$payload.request.type" }, "missing"] },
+                            then: "$payload.request.type",
+                            else: {
+                                $cond: {
+                                    if: { $ne: [{ $type: "$payload.result.action" }, "missing"] },
+                                    then: "$payload.result.action",
+                                    else: "remaining"
+                                }
+                            }
+                        }
+                    }
                 }
             },
             origin: { $addToSet: { $ifNull: [ "$payload.result.action", "$payload.request.type" ] } },
