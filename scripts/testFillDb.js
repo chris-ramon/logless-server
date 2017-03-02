@@ -120,6 +120,8 @@ function generateAmazonRequestPayload(index) {
     const number = getRandomInt(0, intents.length);
     const requestType = intents[number % intents.length];
     const action = actions[number % actions.length];
+    const sessionUserId = (sessionUsers[index % sessionUsers.length]) ? "Amazon." + sessionUsers[index % sessionUsers.length] : undefined;
+    const contextUserId = (contextUsers[index % contextUsers.length]) ? "Amazon." + contextUsers[index % contextUsers.length] : undefined;
     const payload = {
         version: "1.0",
         request: {
@@ -134,7 +136,7 @@ function generateAmazonRequestPayload(index) {
         },
         session: {
             user: {
-                userId: sessionUsers[index % contextUsers.length]
+                userId: sessionUserId
             },
             attributes: {
                 STATE: "_PLAY_MODE",
@@ -156,7 +158,7 @@ function generateAmazonRequestPayload(index) {
             },
             System: {
                 user: {
-                    userId: contextUsers[index % contextUsers.length]
+                    userId: contextUserId
                 }
             }
         }
@@ -185,6 +187,7 @@ function generateGoogleHomeRequestPayload(index) {
     const requestType = intents[number % intents.length];
     const action = actions[number % actions.length];
     const convoId = getRandomInt(0, Math.pow(2, 53) - 1); // Maximum integer allowed in Javascript
+    const userId = (contextUsers[index % contextUsers.length]) ? "Google" + contextUsers[index % contextUsers.length] : undefined;
     return {
         id: guid(),
         timestamp: new Date(),
@@ -238,7 +241,7 @@ function generateGoogleHomeRequestPayload(index) {
                     }
                 ],
                 user: {
-                    userId: contextUsers[index % contextUsers.length]
+                    user_id: userId
                 },
                 conversation: {
                     conversation_id: convoId,

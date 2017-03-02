@@ -109,7 +109,7 @@ export default function (req: Request, res: Response): Promise<CountResult> {
                         case: { $ne: [{ $type: "$payload.result.action" }, "missing"] }, // Google actions.
                         then: "$payload.result.action"
                     }],
-                    default: "remaining" // Default Alexa actions.
+                    default: "remaining" // Something we don't know yet.
                 }
             },
             origin: { $addToSet: { $ifNull: [ "$payload.result.action", "$payload.request.type" ] } },

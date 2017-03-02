@@ -120,30 +120,30 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 
     usersAgg.push(
         {
+            $match: {
+                $or: [{
+                    "payload.session.user.userId": { $exists: true }
+                }, {
+                    "payload.context.System.user.userId": { $exists: true }
+                }, {
+                    "payload.originalRequest.data.user.user_id": { $exists: true }
+                }]
+            }
+        },
+        {
             $group: {
-                _id: null,
-                ID: {
-                    $addToSet: {
-                        foo_id: "$payload.session.user.userId",
-                        bar_id: "$payload.context.System.user.userId"
+                _id: {
+                    $switch: {
+                        branches: [{
+                            case: { $ne: [{ $type: "$payload.session.user.userId" }, "missing"] }, // Alexa actions.
+                            then: "$payload.session.user.userId"
+                        }, {
+                            case: { $ne: [{ $type: "$payload.context.System.user.userId" }, "missing"] }, // Alternate Alexa
+                            then: "$payload.context.System.user.userId"
+                        }],
+                        default: "$payload.originalRequest.data.user.user_id" // It's something we don't know yet.
                     }
                 }
-            }
-        },
-        {
-            $project: {
-                ID: {
-                    $setUnion: ["$ID.foo_id", "$ID.bar_id"]
-                },
-                _id: 0
-            }
-        },
-        {
-            $unwind: "$ID"
-        },
-        {
-            $match: {
-                ID: { $ne: undefined }
             }
         }
     );
@@ -160,27 +160,28 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     };
 
     return Log.aggregate(recordsAgg)
-    .then(function(val: any[]) {
-        Object.assign(result, { totalEvents: val.length });
-        return Log.aggregate(errorsAgg);
-    }).then(function(val: any[]) {
-        Object.assign(result, { totalExceptions: val.length });
-        return Log.aggregate(usersAgg);
-    }).then(function(val: any[]) {
-        Object.assign(result, { totalUsers: val.length });
-        return result;
-    }).then(function(result: any) {
-        stats.stats.totalEvents = result.totalEvents;
-        stats.stats.totalExceptions = result.totalExceptions;
-        stats.stats.totalUsers = result.totalUsers;
-        sendResult(res, stats);
-        return stats;
-    }).catch(function(err: Error) {
-        errorOut(err, res);
-        return stats;
-    });
+        .then(function (val: any[]) {
+            Object.assign(result, { totalEvents: val.length });
+            return Log.aggregate(errorsAgg);
+        }).then(function (val: any[]) {
+            Object.assign(result, { totalExceptions: val.length });
+            return Log.aggregate(usersAgg);
+        }).then(function (val: any[]) {
+            console.log(val);
+            Object.assign(result, { totalUsers: val.length });
+            return result;
+        }).then(function (result: any) {
+            stats.stats.totalEvents = result.totalEvents;
+            stats.stats.totalExceptions = result.totalExceptions;
+            stats.stats.totalUsers = result.totalUsers;
+            sendResult(res, stats);
+            return stats;
+        }).catch(function (err: Error) {
+            errorOut(err, res);
+            return stats;
+        });
 
-/**************************** MongoDB 3.4 compatible query. Use if and when remote server gets updated. ***********************/
+    /**************************** MongoDB 3.4 compatible query. Use if and when remote server gets updated. ***********************/
     // Using facet aggregation to put all the stats together by one.
     // 3.4 does not allow $facet. This would be a faster query when the remote server gets updated.
     // aggregation.push({
