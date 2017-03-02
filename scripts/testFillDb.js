@@ -59,7 +59,14 @@ function createLogs(numOfEntries) {
     var month = 0;
     var day = 15;
     var hour = 0;
+    var payloadGenerator = generateAmazonPayload;
     for (var i = 0; i < numOfEntries; ++i) {
+        if (i % 4 === 0) {
+            payloadGenerator = generateHomePayload;
+        } else if (i % 2 === 0) {
+            payloadGenerator = generateAmazonPayload;
+        }
+
         const nextEntry = createEntry(i, () => {
             if (i > 0 && i % 100 === 0) {
                 --day;
@@ -68,14 +75,14 @@ function createLogs(numOfEntries) {
                 hour = ++hour % 24;
             }
             return new Date(year, month, day, hour);
-        });
+        }, payloadGenerator);
 
         logEntries.push(nextEntry);
     }
     return logEntries;
 }
 
-function createEntry(index, getDate) {
+function createEntry(index, getDate, generatePayload) {
     var type;
     switch (index % 3) {
         case 0:
@@ -101,26 +108,15 @@ function createEntry(index, getDate) {
     };
 }
 
-function generatePayload(type, index) {
-    return (type === TYPE_REQUEST) ? generateRequestPayload(index) : generateResponsePayload();
+function generateAmazonPayload(type, index) {
+    return (type === TYPE_REQUEST) ? generateAmazonRequestPayload(index) : generateAmazonResponsePayload();
 }
 
-function generateResponsePayload() {
-    const payload = {
-        response: {
-            version: "1.0",
-            shouldEndSession: true,
-            directives: [
-                {
-                    type: "AudioPlayer.Stop"
-                }
-            ]
-        }
-    }
-    return payload;
+function generateHomePayload(type, index) {
+    return (type === TYPE_REQUEST) ? generateGoogleHomeRequestPayload(index) : generateGoogleHomeResponsePayload();
 }
 
-function generateRequestPayload(index) {
+function generateAmazonRequestPayload(index) {
     const number = getRandomInt(0, intents.length);
     const requestType = intents[number % intents.length];
     const action = actions[number % actions.length];
@@ -169,11 +165,26 @@ function generateRequestPayload(index) {
     return payload;
 }
 
+function generateAmazonResponsePayload() {
+    const payload = {
+        response: {
+            version: "1.0",
+            shouldEndSession: true,
+            directives: [
+                {
+                    type: "AudioPlayer.Stop"
+                }
+            ]
+        }
+    }
+    return payload;
+}
+
 function generateGoogleHomeRequestPayload(index) {
     const number = getRandomInt(0, intents.length);
     const requestType = intents[number % intents.length];
     const action = actions[number % actions.length];
-    const convoId = getRandomInt(0, Math.pow(2, 53) - 1), // Maximum integer allowed in Javascript
+    const convoId = getRandomInt(0, Math.pow(2, 53) - 1); // Maximum integer allowed in Javascript
     return {
         id: guid(),
         timestamp: new Date(),
