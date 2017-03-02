@@ -3,16 +3,29 @@
 const NUM = 10000;
 
 const intents = [
-    "intent1",
+    "IntentRequest",
     "intent2",
     "intent3",
-    "intent4", 
+    "IntentRequest",
     "intent5",
     "intent6",
-    "intent7",
+    "IntentRequest",
     "intent8",
     "intent9",
     "intent10"
+]
+
+const actions = [
+    "Action1",
+    "Action2",
+    "Action3",
+    "Action4",
+    "Action5",
+    "Action6",
+    "Action7",
+    "Action8",
+    "Action9",
+    "Action10"
 ]
 
 const sessionUsers = [
@@ -46,7 +59,14 @@ function createLogs(numOfEntries) {
     var month = 0;
     var day = 15;
     var hour = 0;
+    var payloadGenerator = generateAmazonPayload;
     for (var i = 0; i < numOfEntries; ++i) {
+        if (i % 4 === 0) {
+            payloadGenerator = generateHomePayload;
+        } else if (i % 2 === 0) {
+            payloadGenerator = generateAmazonPayload;
+        }
+
         const nextEntry = createEntry(i, () => {
             if (i > 0 && i % 100 === 0) {
                 --day;
@@ -55,14 +75,14 @@ function createLogs(numOfEntries) {
                 hour = ++hour % 24;
             }
             return new Date(year, month, day, hour);
-        });
+        }, payloadGenerator);
 
         logEntries.push(nextEntry);
     }
     return logEntries;
 }
 
-function createEntry(index, getDate) {
+function createEntry(index, getDate, generatePayload) {
     var type;
     switch (index % 3) {
         case 0:
@@ -88,35 +108,29 @@ function createEntry(index, getDate) {
     };
 }
 
-function generatePayload(type, index) {
-    return (type === TYPE_REQUEST) ? generateRequestPayload(index) : generateResponsePayload();
+function generateAmazonPayload(type, index) {
+    return (type === TYPE_REQUEST) ? generateAmazonRequestPayload(index) : generateAmazonResponsePayload();
 }
 
-function generateResponsePayload() {
-    const payload = {
-        response: {
-            version: "1.0",
-            shouldEndSession: true,
-            directives: [
-                {
-                    type: "AudioPlayer.Stop"
-                }
-            ]
-        }
-    }
-    return payload;
+function generateHomePayload(type, index) {
+    return (type === TYPE_REQUEST) ? generateGoogleHomeRequestPayload(index) : generateGoogleHomeResponsePayload();
 }
 
-function generateRequestPayload(index) {
+function generateAmazonRequestPayload(index) {
     const number = getRandomInt(0, intents.length);
-    const requestType = intents[number];
+    const requestType = intents[number % intents.length];
+    const action = actions[number % actions.length];
     const payload = {
-        version: "1.0", 
+        version: "1.0",
         request: {
             type: requestType,
             local: "en-US",
             requestId: guid(),
-            timestamp: new Date()
+            timestamp: new Date(),
+            intent: {
+                name: action
+            },
+            inDialog: false
         },
         session: {
             user: {
@@ -136,7 +150,7 @@ function generateRequestPayload(index) {
                 offsetInMilliseconds: 0,
                 playerActivity: "PLAYING",
                 token: "0"
-            }, 
+            },
             application: {
                 applicationId: "amzn1.ask.skill.4ccfe4ca-0fb8-4bd5-94c1-bc37db8c19c1"
             },
@@ -151,8 +165,147 @@ function generateRequestPayload(index) {
     return payload;
 }
 
+function generateAmazonResponsePayload() {
+    const payload = {
+        response: {
+            version: "1.0",
+            shouldEndSession: true,
+            directives: [
+                {
+                    type: "AudioPlayer.Stop"
+                }
+            ]
+        }
+    }
+    return payload;
+}
+
+function generateGoogleHomeRequestPayload(index) {
+    const number = getRandomInt(0, intents.length);
+    const requestType = intents[number % intents.length];
+    const action = actions[number % actions.length];
+    const convoId = getRandomInt(0, Math.pow(2, 53) - 1); // Maximum integer allowed in Javascript
+    return {
+        id: guid(),
+        timestamp: new Date(),
+        result: {
+            source: "agent",
+            resolvedQuery: "GOOGLE_ASSISTANT_WELCOME",
+            speech: "",
+            action: action,
+            actionIncomplete: false,
+            contexts: [
+                {
+                    name: "google_assistant_welcome",
+                    lifespan: 0
+                }
+            ],
+            metadata: {
+                intentId: guid(),
+                webhookUsed: true,
+                webhookForSlotFillingUsed: false,
+                intentName: "Initial Intent " + action
+            },
+            fulfillment: {
+                speech: "",
+                messages: [
+                    {
+                        type: 0,
+                        speech: ""
+                    }
+                ]
+            },
+            score: 1
+        },
+        status: {
+            code: 200,
+            errorType: "success"
+        },
+        sessionId: convoId,
+        originalRequest: {
+            source: "google",
+            data: {
+                inputs: [
+                    {
+                        arguments: [],
+                        intent: action,
+                        raw_inputs: [
+                            {
+                                query: requestType,
+                                input_type: 2
+                            }
+                        ]
+                    }
+                ],
+                user: {
+                    userId: contextUsers[index % contextUsers.length]
+                },
+                conversation: {
+                    conversation_id: convoId,
+                    type: 1
+                }
+            }
+        }
+    }
+}
+
+function generateGoogleHomeResponsePayload() {
+    return {
+        speech: "<speak> <audio src=\"https://s3.amazonaws.com/xapp-files/Voice+Apps/Progressive/Progressive-Home_Page.mp3\" /> <break time=\"0.2s\"/> Which would you like to hear? </speak>",
+        data: {
+            google: {
+                expect_user_response: true,
+                is_ssml: true,
+                no_input_prompts: [
+                    {
+                        ssml: "<speak> Would you like to hear tips about your car, or tips about your home? </speak>"
+                    }
+                ],
+                contextOut: [
+                    {
+                        name: "_actions_on_google_",
+                        lifespan: 100,
+                        parameters: {
+                            LASTINTENT: {
+                                name: "LaunchIntent",
+                                utterances: [],
+                                action: {
+                                    ask: {
+                                        text: "<speak> <audio src=\"https://s3.amazonaws.com/xapp-files/Voice+Apps/Progressive/Progressive-Home_Page.mp3\" /> <break time=\"0.2s\"/> Which would you like to hear? </speak>",
+                                        type: "TEXT"
+                                    },
+                                    reprompt: {
+                                        text: "<speak> Would you like to hear tips about your car, or tips about your home? </speak>",
+                                        type: "TEXT"
+                                    }
+                                },
+                                expectedIntents: [
+                                    "HomePage",
+                                    "Help",
+                                    "CarTips",
+                                    "CarBuying",
+                                    "InsuranceQuote",
+                                    "UsedCarTips",
+                                    "CarCareTips",
+                                    "HomeTips",
+                                    "CurbAppeal",
+                                    "SmartHome",
+                                    "Moving",
+                                    "MoreChoices",
+                                    "Repeat"
+                                ]
+                            },
+                            LASTPROMPT: "<speak> <audio src=\"https://s3.amazonaws.com/xapp-files/Voice+Apps/Progressive/Progressive-Home_Page.mp3\" /> <break time=\"0.2s\"/> Which would you like to hear? </speak>"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}
+
 function generateName(index) {
-    switch(index % 5) {
+    switch (index % 5) {
         case 0:
             return "happy_einstein";
 
@@ -171,17 +324,17 @@ function generateName(index) {
 }
 
 function guid() {
-  function s4() {
-    return Math.floor((1 + Math.random()) * 0x10000)
-      .toString(16)
-      .substring(1);
-  }
-  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-    s4() + '-' + s4() + s4() + s4();
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+    }
+    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+        s4() + '-' + s4() + s4() + s4();
 }
 
 function getRandomInt(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min)) + min;
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min)) + min;
 }

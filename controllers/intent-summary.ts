@@ -69,7 +69,7 @@ import { Count, CountResult } from "../lib/counter";
  *               type: object
  */
 export default function (req: Request, res: Response): Promise<CountResult> {
-    const reqQuer = Object.assign({}, req.query);
+    const reqQuer = Object.assign({}, req.query) as ReqQuer;
 
     const query: any = {
         "payload.request": { $exists: true }
@@ -94,7 +94,12 @@ export default function (req: Request, res: Response): Promise<CountResult> {
     // Group by the request type in the payload and count the number.
     aggregation.push({
         $group: {
-            _id: "$payload.request.type",
+            _id: {
+                $cond: [{
+                    $eq: ["$payload.request.type", "IntentRequest"]
+                }, "$payload.request.intent.name", "$payload.request.type"]
+            },
+            origin: { $addToSet: "$payload.request.type"},
             count: { $sum: 1 }
         }
     });
@@ -102,32 +107,33 @@ export default function (req: Request, res: Response): Promise<CountResult> {
     // Only push if there is a value "count_sort" in the request.
     if (reqQuer.count_sort) {
         if (reqQuer.count_sort === "asc") {
-            aggregation.push({ $sort: { count: 1}});
+            aggregation.push({ $sort: { count: 1 } });
         } else if (reqQuer.count_sort === "desc") {
-            aggregation.push({ $sort: { count: -1}});
+            aggregation.push({ $sort: { count: -1 } });
         }
     }
 
     return Log.aggregate(aggregation)
-    .then(function (aggregation: any[]): Count[] {
-        return aggregation.map(function (value: any, index: number, array: any[]): Count {
-            const count: Count = {
-                name: value._id,
-                count: value.count
+        .then(function (aggregation: any[]): Count[] {
+            return aggregation.map(function (value: any, index: number, array: any[]): Count {
+                const count: Count = {
+                    name: (value.origin[0] === "IntentRequest") ? value.origin[0] + "." + value._id : value._id,
+                    count: value.count
+                };
+                return count;
+            });
+        })
+        .then(function (counts: Count[]): CountResult {
+            const result: CountResult = {
+                count: counts
             };
-            return count;
-        });
-    }).then(function (counts: Count[]): CountResult {
-        const result: CountResult = {
-            count: counts
-        };
 
-        sendResult(res, result);
-        return result;
-    }).catch(function (err: Error) {
-        errorOut(err, res);
-        return { count: [] };
-    });
+            sendResult(res, result);
+            return result;
+        }).catch(function (err: Error) {
+            errorOut(err, res);
+            return { count: [] };
+        });
 }
 
 function sendResult(response: Response, result: CountResult) {
@@ -137,4 +143,9 @@ function sendResult(response: Response, result: CountResult) {
 function errorOut(error: Error, response: Response) {
     Console.info("Error getting logs summary: " + error.message);
     response.status(400).send(error.message);
+}
+
+interface ReqQuer {
+    source: string;
+    count_sort: "asc" | "desc";
 }
