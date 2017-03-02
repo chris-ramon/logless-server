@@ -38,17 +38,10 @@ describe("Intent count summary", function () {
 
     describe("Successfull queries to the database.", function () {
         let dummyAggs: Aggregate[];
-        let baseGroupObj: any;
 
         before(function () {
             dummyAggs = dummyAggregates(NUM_OF_AGGS);
             logAggregate = Sinon.stub(Log, "aggregate").returns(Promise.resolve(dummyAggs));
-            baseGroupObj = {
-                $group: {
-                    _id: "$payload.request.type",
-                    count: { $sum: 1 }
-                }
-            };
         });
 
         beforeEach(function () {
@@ -63,9 +56,9 @@ describe("Intent count summary", function () {
             const startOfToday = new Date(today.toISOString());
             startOfToday.setHours(0, 0, 0, 0);
 
-            return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
+            return intentSummary(mockRequest, mockResponse)
+            .then(function (result: CountResult) {
                 expect(logAggregate).to.have.been.calledOnce;
-                expect(logAggregate).to.have.been.calledWith([{ $match: { "payload.request": { $exists: true } } }, baseGroupObj]);
 
                 expect(result).to.not.be.undefined;
                 expect(result.count).to.have.length(NUM_OF_AGGS);
@@ -82,7 +75,7 @@ describe("Intent count summary", function () {
                 mockRequest.query = { source: "ABC123" };
 
                 return intentSummary(mockRequest, mockResponse).then(function (result: CountResult) {
-                    expect(logAggregate).to.be.calledWith([{ $match: { "payload.request": { $exists: true }, source: "ABC123" } }, baseGroupObj]);
+                    expect(logAggregate).to.be.calledOnce;
                 });
             });
 
@@ -172,6 +165,7 @@ describe("Intent count summary", function () {
 
 interface Aggregate {
     _id: string;
+    origin: string;
     count: number;
 }
 
@@ -180,6 +174,7 @@ function dummyAggregates(num: number): Aggregate[] {
     for (let i = 0; i < num; ++i) {
         aggs.push({
             _id: "aggragte" + i,
+            origin: "IntentRequest",
             count: i
         });
     }
