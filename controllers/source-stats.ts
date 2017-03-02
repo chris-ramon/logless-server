@@ -133,15 +133,16 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
         {
             $group: {
                 _id: {
-                    $switch: {
-                        branches: [{
-                            case: { $ne: [{ $type: "$payload.session.user.userId" }, "missing"] }, // Alexa actions.
-                            then: "$payload.session.user.userId"
-                        }, {
-                            case: { $ne: [{ $type: "$payload.context.System.user.userId" }, "missing"] }, // Alternate Alexa
-                            then: "$payload.context.System.user.userId"
-                        }],
-                        default: "$payload.originalRequest.data.user.user_id" // It's something we don't know yet.
+                    $cond: {
+                        if: { $ne: [{ $type: "$payload.session.user.userId" }, "missing"] }, // Amazon part 1
+                        then: "$payload.session.user.userId",
+                        else: {
+                            $cond: {
+                                if: { $ne: [{ $type: "$payload.context.System.user.userId" }, "missing"] },  // Amazon part 2
+                                then: "$payload.context.System.user.userId",
+                                else: "$payload.originalRequest.data.user.user_id"  // Resort to Google
+                            }
+                        }
                     }
                 }
             }
