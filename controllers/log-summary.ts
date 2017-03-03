@@ -257,7 +257,7 @@ export function fillGaps(summary: TimeSummary, dateRange: DateRange = {}, granul
     return Promise.resolve(newSummary);
 }
 
-export function fillGapsInBucket(buckets: TimeBucket[], dateRange: DateRange = {}, granularity: Granularity = "hour", sortOrder: "asc" | "desc" = "asc") {
+export function fillGapsInBucket(buckets: TimeBucket[] = [], dateRange: DateRange = {}, granularity: Granularity = "hour", sortOrder: "asc" | "desc" = "asc") {
     const increasing = sortOrder === "asc";
 
     if (buckets.length === 0) {
