@@ -57,17 +57,17 @@ describe("Intent count summary", function () {
             startOfToday.setHours(0, 0, 0, 0);
 
             return intentSummary(mockRequest, mockResponse)
-            .then(function (result: CountResult) {
-                expect(logAggregate).to.have.been.calledOnce;
+                .then(function (result: CountResult) {
+                    expect(logAggregate).to.have.been.calledOnce;
 
-                expect(result).to.not.be.undefined;
-                expect(result.count).to.have.length(NUM_OF_AGGS);
+                    expect(result).to.not.be.undefined;
+                    expect(result.count).to.have.length(NUM_OF_AGGS);
 
-                expect(statusStub).to.be.calledWithExactly(200);
+                    expect(statusStub).to.be.calledWithExactly(200);
 
-                expect(jsonStub).to.have.been.calledOnce;
-                expect(jsonStub).to.have.been.calledWithExactly(result);
-            });
+                    expect(jsonStub).to.have.been.calledOnce;
+                    expect(jsonStub).to.have.been.calledWithExactly(result);
+                });
         });
 
         describe("Tests the queries are properly set.", function () {
@@ -165,7 +165,8 @@ describe("Intent count summary", function () {
 
 interface Aggregate {
     _id: string;
-    origin: string;
+    origin: string[];
+    type: string[];
     count: number;
 }
 
@@ -174,7 +175,8 @@ function dummyAggregates(num: number): Aggregate[] {
     for (let i = 0; i < num; ++i) {
         aggs.push({
             _id: "aggragte" + i,
-            origin: "IntentRequest",
+            origin: [ "IntentRequest" ],
+            type: [ "Amazon.Alexa" ],
             count: i
         });
     }
