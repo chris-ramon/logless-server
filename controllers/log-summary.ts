@@ -106,10 +106,10 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
 
     googleHomeAggregation.push({
         $group: sharedGroup
-    })
+    });
 
     let isSorted: boolean = false;
-    if (reqQuer.date_sort) {
+    if (reqQuer.date_sort === "asc" || reqQuer.date_sort === "desc") {
         const query = getSort(reqQuer);
         if (query) {
             isSorted = true;
@@ -125,7 +125,7 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
         }
     }
 
-    const shouldFillGaps: boolean = (reqQuer.fill_gaps !== undefined) ? isSorted : false;
+    const shouldFillGaps: boolean = reqQuer.fill_gaps !== undefined && reqQuer.fill_gaps && isSorted;
     const gran: Granularity = (reqQuer.granularity === "hour") ? "hour" : "day";
 
     return Log.aggregate(totalAggregation)
@@ -135,12 +135,6 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
                 buckets: buckets
             };
             return timeSummary;
-        }).then(function (timeSummary: TimeSummary) {
-            if (shouldFillGaps) {
-                return fillGaps(timeSummary, dateRange(reqQuer), granularity(reqQuer, gran));
-            } else {
-                return timeSummary;
-            }
         }).then(function (timeSummary: TimeSummary) {
             return Log.aggregate(amazonAggregation)
                 .then(mapResults)
@@ -155,6 +149,13 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
                     timeSummary.googleBuckets = buckets;
                     return timeSummary;
                 });
+        }).then(function (timeSummary: TimeSummary) {
+            if (shouldFillGaps) {
+                const range = dateRange(reqQuer);
+                const granul = granularity(reqQuer, gran);
+                return fillGaps(timeSummary, range, granul, reqQuer.date_sort);
+            }
+            return timeSummary;
         }).then(function (timeSummary: TimeSummary) {
             sendOut(timeSummary, res);
             return timeSummary;
@@ -249,32 +250,42 @@ function dateRange(reqQuer: TimeQuery): DateRange {
     return dateRange;
 }
 
+export function fillGaps(summary: TimeSummary, dateRange: DateRange = {}, granularity: Granularity = "hour", sortOrder: "asc" | "desc" = "asc"): Promise<TimeSummary> {
+    const newSummary: TimeSummary = { buckets: fillGapsInBucket(summary.buckets, dateRange, granularity, sortOrder) };
+    newSummary.amazonBuckets = fillGapsInBucket(summary.amazonBuckets, dateRange, granularity, sortOrder);
+    newSummary.googleBuckets = fillGapsInBucket(summary.googleBuckets, dateRange, granularity, sortOrder);
+    return Promise.resolve(newSummary);
+}
 
-export function fillGaps(summary: TimeSummary, dateRange: DateRange = {}, granularity: Granularity = "hour"): Promise<TimeSummary> {
-    const buckets = summary.buckets;
+export function fillGapsInBucket(buckets: TimeBucket[], dateRange: DateRange = {}, granularity: Granularity = "hour", sortOrder: "asc" | "desc" = "asc") {
+    const increasing = sortOrder === "asc";
+
     if (buckets.length === 0) {
-        const gaps: TimeBucket[] = fillGapInclusive(dateRange.start_time, dateRange.end_time, granularity);
-        const newSummary: TimeSummary = Object.assign({}, summary, { buckets: gaps });
-        return Promise.resolve(newSummary);
+        const start = (increasing) ? dateRange.start_time : dateRange.end_time;
+        const end = (increasing) ? dateRange.end_time : dateRange.start_time;
+        const gaps: TimeBucket[] = fillGapInclusive(start, end, granularity);
+        return gaps;
     }
 
-    const firstBucketDate = moment(buckets[0].date);
-    const lastBucketDate = moment(buckets[buckets.length - 1].date);
+    let startDate: moment.Moment = moment(buckets[0].date);
+    let endDate: moment.Moment = moment(buckets[buckets.length - 1].date);
 
-    let startDate: moment.Moment = firstBucketDate;
-    if (dateRange.start_time) {
-        startDate = dateRange.start_time;
-        const increasing = startDate.isBefore(firstBucketDate);
-        if (increasing) {
+    if (increasing) {
+        if (dateRange.start_time) {
+            startDate = dateRange.start_time;
             startDate.subtract(1, granularity);
-        } else {
+        }
+        if (dateRange.end_time) {
+            endDate = dateRange.end_time;
+        }
+    } else {
+        if (dateRange.start_time) {
+            endDate = dateRange.start_time;
+        }
+        if (dateRange.end_time) {
+            startDate = dateRange.end_time;
             startDate.add(1, granularity);
         }
-    }
-
-    let endDate: moment.Moment = lastBucketDate;
-    if (dateRange.end_time) {
-        endDate = dateRange.end_time;
     }
 
     let bucketCopy = buckets.slice();
@@ -296,10 +307,7 @@ export function fillGaps(summary: TimeSummary, dateRange: DateRange = {}, granul
 
     const remaining: TimeBucket[] = fillGapInclusive(currentDate, endDate, granularity);
     remaining.shift();
-    bucketCopy = bucketCopy.concat(remaining);
-
-    const newSummary: TimeSummary = Object.assign({}, summary, { buckets: bucketCopy });
-    return Promise.resolve(newSummary);
+    return bucketCopy.concat(remaining);
 }
 
 export function fillGapInclusive(from: moment.Moment, to: moment.Moment, granularity: Granularity): TimeBucket[] {
