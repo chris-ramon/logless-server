@@ -78,23 +78,49 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
         Object.assign(query, { source: reqQuer.source });
     }
 
-    let aggregation = [];
+    let totalAggregation = [];
+    let amazonAggregation = [];
+    let googleHomeAggregation = [];
 
-    aggregation.push({
+    const sharedGroup = getGroup(reqQuer);
+
+    totalAggregation.push({
         $match: query
     });
 
-    aggregation.push({
-        $group: getGroup(reqQuer)
+    totalAggregation.push({
+        $group: sharedGroup
     });
+
+    amazonAggregation.push({
+        $match: Object.assign({}, query, { $or: [{ "payload.request": { $exists: true } }, { "payload.response": { $exists: true } }] })
+    });
+
+    amazonAggregation.push({
+        $group: sharedGroup
+    });
+
+    googleHomeAggregation.push({
+        $match: Object.assign({}, query, { $or: [{ "payload.result": { $exists: true } }, { "payload.speech": { $exists: true } }] })
+    });
+
+    googleHomeAggregation.push({
+        $group: sharedGroup
+    })
 
     let isSorted: boolean = false;
     if (reqQuer.date_sort) {
         const query = getSort(reqQuer);
         if (query) {
             isSorted = true;
-            aggregation.push({
-                $sort: getSort(reqQuer)
+            totalAggregation.push({
+                $sort: query
+            });
+            amazonAggregation.push({
+                $sort: query
+            });
+            googleHomeAggregation.push({
+                $sort: query
             });
         }
     }
@@ -102,12 +128,9 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
     const shouldFillGaps: boolean = (reqQuer.fill_gaps !== undefined) ? isSorted : false;
     const gran: Granularity = (reqQuer.granularity === "hour") ? "hour" : "day";
 
-    return Log.aggregate(aggregation)
-        .then(function (results: any[]): TimeBucket[] {
-            return results.map(function (value: any, index: number, array: any[]): TimeBucket {
-                return new ParsedTimeBucket(value);
-            });
-        }).then(function (buckets: TimeBucket[]): TimeSummary {
+    return Log.aggregate(totalAggregation)
+        .then(mapResults)
+        .then(function (buckets: TimeBucket[]): TimeSummary {
             const timeSummary: TimeSummary = {
                 buckets: buckets
             };
@@ -119,12 +142,32 @@ export default function (req: Request, res: Response): Promise<TimeSummary> {
                 return timeSummary;
             }
         }).then(function (timeSummary: TimeSummary) {
+            return Log.aggregate(amazonAggregation)
+                .then(mapResults)
+                .then(function(buckets: TimeBucket[]) {
+                    timeSummary.amazonBuckets = buckets;
+                    return timeSummary;
+                });
+        }).then(function (timeSummary: TimeSummary) {
+            return Log.aggregate(googleHomeAggregation)
+                .then(mapResults)
+                .then(function(buckets: TimeBucket[]) {
+                    timeSummary.googleBuckets = buckets;
+                    return timeSummary;
+                });
+        }).then(function (timeSummary: TimeSummary) {
             sendOut(timeSummary, res);
             return timeSummary;
         }).catch(function (err: Error) {
             errorOut(err, res);
             return { buckets: [] };
         });
+}
+
+function mapResults(results: any[]): TimeBucket[] {
+    return results.map(function (value: any, index: number, array: any[]): TimeBucket {
+        return new ParsedTimeBucket(value);
+    });
 }
 
 function sendOut(summary: TimeSummary, response: Response) {
