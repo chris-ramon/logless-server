@@ -10,6 +10,9 @@ import Console from "../lib/console-utils";
 
 import { Count, CountResult } from "../lib/counter";
 
+const AMAZON_ALEXA = "Amazon.Alexa";
+const GOOGLE_HOME = "Google.Home";
+
 /**
  * @swagger
  * /intentSummary:
@@ -116,7 +119,16 @@ export default function (req: Request, res: Response): Promise<CountResult> {
                     }
                 }
             },
-            origin: { $addToSet: { $ifNull: [ "$payload.result.action", "$payload.request.type" ] } },
+            type: { $addToSet: { $ifNull: ["$payload.result.action", "$payload.request.type"] } },
+            origin: {
+                $addToSet: {
+                    $cond: {
+                        if: { $ne: [{ $type: "$payload.request.type" }, "missing"] },
+                        then: AMAZON_ALEXA,
+                        else: GOOGLE_HOME
+                    }
+                }
+            },
             count: { $sum: 1 }
         }
     });
@@ -134,8 +146,9 @@ export default function (req: Request, res: Response): Promise<CountResult> {
         .then(function (aggregation: any[]): Count[] {
             return aggregation.map(function (value: any, index: number, array: any[]): Count {
                 const count: Count = {
-                    name: (value.origin[0] === "IntentRequest") ? value.origin[0] + "." + value._id : value._id,
-                    count: value.count
+                    name: (value.type[0] === "IntentRequest") ? value.origin[0] + "." + value._id : value._id,
+                    count: value.count,
+                    origin: value.origin[0]
                 };
                 return count;
             });
