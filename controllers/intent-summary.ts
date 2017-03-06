@@ -106,11 +106,11 @@ export default function (req: Request, res: Response): Promise<CountResult> {
                     then: "$payload.request.intent.name",
                     else: {
                         $cond: {
-                            if: { $ne: [{ $type: "$payload.request.type" }, "missing"] },
+                            if: { $ne: [{ $ifNull: [ "$payload.request.type", "missing" ] }, "missing"] },
                             then: "$payload.request.type",
                             else: {
                                 $cond: {
-                                    if: { $ne: [{ $type: "$payload.result.action" }, "missing"] },
+                                    if: { $ne: [{ $ifNull: [ "$payload.result.action", "missing" ] }, "missing"] },
                                     then: "$payload.result.action",
                                     else: "remaining"
                                 }
@@ -123,7 +123,7 @@ export default function (req: Request, res: Response): Promise<CountResult> {
             origin: {
                 $addToSet: {
                     $cond: {
-                        if: { $ne: [{ $type: "$payload.request.type" }, "missing"] },
+                        if: { $ne: [{ $ifNull: [ "$payload.request.type", "missing" ] }, "missing"] },
                         then: AMAZON_ALEXA,
                         else: GOOGLE_HOME
                     }
