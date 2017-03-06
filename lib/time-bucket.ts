@@ -10,6 +10,8 @@ export interface Timestamped {
 
 export interface TimeSummary {
     buckets: TimeBucket[];
+    amazonBuckets?: TimeBucket[];
+    googleBuckets?: TimeBucket[];
 }
 
 export interface TimeBucket {

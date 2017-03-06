@@ -1,6 +1,7 @@
 export interface Count {
     name: string;
     count: number;
+    origin?: string;
 }
 
 export interface CountResult {
