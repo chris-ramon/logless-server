@@ -59,6 +59,7 @@ function createLogs(numOfEntries) {
     var month = 0;
     var day = 15;
     var hour = 0;
+    var transaction_id;
     var payloadGenerator = generateAmazonPayload;
     for (var i = 0; i < numOfEntries; ++i) {
         if (i % 4 === 0) {
@@ -75,14 +76,19 @@ function createLogs(numOfEntries) {
                 hour = ++hour % 24;
             }
             return new Date(year, month, day, hour);
-        }, payloadGenerator);
+        }, payloadGenerator, () => {
+            if (i % 2 === 0) {
+                transaction_id = guid();
+            }
+            return transaction_id;
+        });
 
         logEntries.push(nextEntry);
     }
     return logEntries;
 }
 
-function createEntry(index, getDate, generatePayload) {
+function createEntry(index, getDate, generatePayload, generateTransactionId) {
     var type;
     switch (index % 3) {
         case 0:
@@ -100,7 +106,7 @@ function createEntry(index, getDate, generatePayload) {
     const payload = generatePayload(payloadType, index);
     return {
         source: generateName(index),
-        transaction_id: guid(),
+        transaction_id: generateTransactionId(index),
         payload: payload,
         log_type: type,
         tags: [payloadType, "tag" + index, "tag" + index + 1],
