@@ -58,7 +58,7 @@ describe("Log time summary", function () {
             startOfToday.setHours(0, 0, 0, 0);
 
             return logSummary(mockRequest, mockResponse).then(function (summary: TimeSummary) {
-                // expect(logAggregate).to.have.been.calledOnce;  // Once is ideal, but it's calling three times for each device and total.  This can't be fixed until server upgrades to MongoDB 3.4.
+                // expect(logAggregate).to.have.been.calledOnce;  // Once is ideal, but it"s calling three times for each device and total.  This can"t be fixed until server upgrades to MongoDB 3.4.
                 expect(logAggregate).to.have.been.called;
 
                 expect(summary).to.exist;
@@ -157,7 +157,7 @@ describe("Log time summary", function () {
 
                     const buckets: TimeBucket[] = fillGap(startDate, endDate, "hour");
 
-                    expect(buckets).to.have.length(24); // It won't include the end.
+                    expect(buckets).to.have.length(24); // It won"t include the end.
 
                     const checkDate = moment(startDate);
                     for (let bucket of buckets) {
@@ -174,7 +174,7 @@ describe("Log time summary", function () {
 
                     const buckets: TimeBucket[] = fillGap(startDate, endDate, "hour");
 
-                    expect(buckets).to.have.length(24); // It won't include the end.
+                    expect(buckets).to.have.length(24); // It won"t include the end.
 
                     const checkDate = moment(startDate);
                     for (let bucket of buckets) {
@@ -218,7 +218,7 @@ describe("Log time summary", function () {
 
                     const buckets: TimeBucket[] = fillGap(startDate, endDate, "day");
 
-                    expect(buckets).to.have.length(6); // It won't include the end.
+                    expect(buckets).to.have.length(6); // It won"t include the end.
 
                     const checkDate = moment(startDate);
                     for (let bucket of buckets) {
@@ -235,7 +235,7 @@ describe("Log time summary", function () {
 
                     const buckets: TimeBucket[] = fillGap(startDate, endDate, "day");
 
-                    expect(buckets).to.have.length(5); // It won't include the end.
+                    expect(buckets).to.have.length(5); // It won"t include the end.
 
                     const checkDate = moment(startDate);
                     for (let bucket of buckets) {
@@ -563,7 +563,7 @@ interface Aggregate {
         day: number,
         year: number
     };
-    count: number;
+    transactions: string[];
 }
 
 function dummyAggregates(num: number): Aggregate[] {
@@ -575,7 +575,7 @@ function dummyAggregates(num: number): Aggregate[] {
                 day: i + 1,
                 year: i + 2000
             },
-            count: i
+            transactions: createGuuids(num)
         });
     }
     return aggs;
@@ -599,4 +599,22 @@ function dummySummary(num: number, increasing: boolean, gapsBetweenDays: number 
         }
     }
     return summary;
+}
+
+function createGuuids(num: number): string[] {
+    let guids: string[] = [];
+    for (let i = 0; i < num; ++i) {
+        guids.push(guid());
+    }
+    return guids;
+}
+
+function guid() {
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+    }
+    return s4() + s4() + "-" + s4() + "-" + s4() + "-" +
+        s4() + "-" + s4() + s4() + s4();
 }
