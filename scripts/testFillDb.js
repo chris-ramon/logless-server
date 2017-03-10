@@ -136,7 +136,7 @@ function generateAmazonRequestPayload(index) {
             requestId: guid(),
             timestamp: new Date(),
             intent: {
-                name: "Amazon." + action
+                name: action
             },
             inDialog: false
         },
@@ -201,7 +201,7 @@ function generateGoogleHomeRequestPayload(index) {
             source: "agent",
             resolvedQuery: "GOOGLE_ASSISTANT_WELCOME",
             speech: "",
-            action: "Google." + action,
+            action: action,
             actionIncomplete: false,
             contexts: [
                 {
