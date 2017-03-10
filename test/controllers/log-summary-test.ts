@@ -356,6 +356,16 @@ describe("Log time summary", function () {
                     });
                 });
 
+                it("Tests the date range is *not* modified in the process.", function () {
+                    const summary: TimeSummary = dummySummary(0, true);
+                    const dateRange = { start_time: moment([2017, 0, 15]), end_time: moment([2017, 0, 16]) };
+                    const copy = { start_time: moment([2017, 0, 15]), end_time: moment([2017, 0, 16]) };
+
+                    return fillGaps(summary, dateRange).then(function (newSummary: TimeSummary) {
+                        expect(dateRange).to.deep.equal(copy);
+                    });
+                });
+
                 it("Fills in gaps when a date range is provided and summary is empty and descreasing.", function () {
                     const summary: TimeSummary = dummySummary(0, false);
                     const dateRange = { start_time: moment([2017, 0, 15]), end_time: moment([2017, 0, 16]) };
@@ -370,6 +380,16 @@ describe("Log time summary", function () {
                             expect(newSummary.buckets[i].count).to.equal(0);
                             checkDate.subtract(1, "hour");
                         }
+                    });
+                });
+
+                it("Tests the date range is *not* modified in the process.", function () {
+                    const summary: TimeSummary = dummySummary(0, false);
+                    const dateRange = { start_time: moment([2017, 0, 15]), end_time: moment([2017, 0, 16]) };
+                    const copy = { start_time: moment([2017, 0, 15]), end_time: moment([2017, 0, 16]) };
+
+                    return fillGaps(summary, dateRange, "hour", "desc").then(function (newSummary: TimeSummary) {
+                        expect(dateRange).to.deep.equal(copy);
                     });
                 });
 
@@ -395,6 +415,19 @@ describe("Log time summary", function () {
                             }
                             checkDate.add(1, "hour");
                         }
+                    });
+                });
+
+                it("Date range is *not* changed on when summary is provided.", function () {
+                    const summary: TimeSummary = dummySummary(2, true);
+                    const firstDate: moment.Moment = moment(summary.buckets[0].date).subtract(1, "days");
+                    const lastDate: moment.Moment = moment(summary.buckets[summary.buckets.length - 1].date).add(1, "days");
+                    const dateRange = { start_time: firstDate, end_time: lastDate };
+
+                    const copyRange = { start_time: firstDate.clone(), end_time: lastDate.clone() };
+
+                    return fillGaps(summary, dateRange).then(function (newSummary: TimeSummary) {
+                        expect(dateRange).to.deep.equal(copyRange);
                     });
                 });
             });
