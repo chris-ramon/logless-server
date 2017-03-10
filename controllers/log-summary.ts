@@ -186,9 +186,7 @@ function getGroup(reqQuer: TimeQuery): any {
             day: { $dayOfMonth: "$timestamp" },
             year: { $year: "$timestamp" }
         },
-        count: {
-            $sum: 1
-        }
+        transactions: { $addToSet: "$transaction_id" }
     };
 
     if (reqQuer.granularity === "hour") {
@@ -400,8 +398,8 @@ class ParsedTimeBucket implements TimeBucket {
 
     constructor(value: any) {
         // The month parameter starts at 0 index where-as the query starts at 1.  So subtract 1.
-        this.date = new Date(value._id.year, value._id.month - 1, value._id.day, 0, 0, 0, 0),
-            this.count = value.count;
+        this.date = new Date(value._id.year, value._id.month - 1, value._id.day, 0, 0, 0, 0);
+        this.count = value.transactions.length;
 
         if (value._id.hour) {
             this.date.setHours(value._id.hour - 1);
