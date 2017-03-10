@@ -101,14 +101,16 @@ export default function (req: Request, res: Response): Promise<CountResult> {
     aggregation.push({
         $group: {
             _id: {
-                $cond: {
-                    if: { $eq: ["$payload.request.type", "IntentRequest"] },
-                    then: "$payload.request.intent.name",
-                    else: {
-                        $ifNull: ["$payload.request.type", { $ifNull: ["$payload.result.action", "remaining"] }]
+                "amazon": {
+                    $cond: {
+                        if: { $eq: ["$payload.request.type", "IntentRequest"] },
+                        then: "$payload.request.intent.name",
+                        else: "$payload.request.type"
                     }
-                }
+                },
+                "google": "$payload.result.action"
             },
+            count: { $sum: 1 },
             type: { $addToSet: { $ifNull: ["$payload.result.action", "$payload.request.type"] } },
             origin: {
                 $addToSet: {
@@ -118,10 +120,35 @@ export default function (req: Request, res: Response): Promise<CountResult> {
                         else: GOOGLE_HOME
                     }
                 }
-            },
-            count: { $sum: 1 }
+            }
         }
     });
+
+
+    // aggregation.push({
+    //     $group: {
+    //         _id: {
+    //             $cond: {
+    //                 if: { $eq: ["$payload.request.type", "IntentRequest"] },
+    //                 then: "$payload.request.intent.name",
+    //                 else: {
+    //                     $ifNull: ["$payload.request.type", { $ifNull: ["$payload.result.action", "remaining"] }]
+    //                 }
+    //             }
+    //         },
+    //         type: { $addToSet: { $ifNull: ["$payload.result.action", "$payload.request.type"] } },
+    //         origin: {
+    //             $addToSet: {
+    //                 $cond: {
+    //                     if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
+    //                     then: AMAZON_ALEXA,
+    //                     else: GOOGLE_HOME
+    //                 }
+    //             }
+    //         },
+    //         count: { $sum: 1 }
+    //     }
+    // });
 
     // Only push if there is a value "count_sort" in the request.
     if (reqQuer.count_sort) {
@@ -136,7 +163,7 @@ export default function (req: Request, res: Response): Promise<CountResult> {
         .then(function (aggregation: any[]): Count[] {
             return aggregation.map(function (value: any, index: number, array: any[]): Count {
                 const count: Count = {
-                    name: (value.type[0] === "IntentRequest") ? value.origin[0] + "." + value._id : value._id,
+                    name: (value._id.amazon) ? value._id.amazon : value._id.google,
                     count: value.count,
                     origin: value.origin[0]
                 };
