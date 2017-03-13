@@ -113,15 +113,14 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 
     recordsAgg.push(
         {
-            $match: {
-                "transaction_id": { $exists: true }
-            },
-        },
-        {
             $project: {
                 "transaction_id": 1,
                 "payload.request.type": 1,
                 "payload.result.action": 1
+            },
+        }, {
+            $match: {
+                "transaction_id": { $exists: true }
             },
         }, {
             $group: {
@@ -148,13 +147,14 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 
     errorsAgg.push(
         {
-            $match: { log_type: "ERROR" },
-        }, {
             $project: {
+                "log_type": 1,
                 "transaction_id": 1,
                 "payload.request.type": 1,
                 "payload.result.action": 1
             },
+        }, {
+            $match: { log_type: "ERROR" },
         }, {
             $group: {
                 _id: "$transaction_id",
@@ -183,6 +183,15 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     // "$payload.originalRequest.data.user.user_id" Google Home (API.AI)
     usersAgg.push(
         {
+            $project: {
+                "transaction_id": 1,
+                "payload.session.user.userId": 1,
+                "payload.context.System.user.userId": 1,
+                "payload.originalRequest.data.user.user_id": 1,
+                "payload.request.type": 1,
+                "payload.result.action": 1
+            }
+        }, {
             $match: {
                 $or: [{
                     "payload.session.user.userId": { $exists: true }
@@ -193,16 +202,6 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 }]
             }
         }, {
-            $project: {
-                "transaction_id": 1,
-                "payload.session.user.userId": 1,
-                "payload.context.System.user.userId": 1,
-                "payload.originalRequest.data.user.user_id": 1,
-                "payload.request.type": 1,
-                "payload.result.action": 1
-            },
-        },
-        {
             $group: {
                 _id: {
                     $ifNull: ["$payload.session.user.userId",
