@@ -273,8 +273,6 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 }
 
 function retrieveTotals(stats: SourceStats, statValue: string, val: any[]): any {
-    console.info("Retrieving totals for " + statValue);
-    console.log(val);
     stats.stats[statValue] = 0;
     for (let i = 0; i < val.length; ++i) {
         const value = val[i];
