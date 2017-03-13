@@ -207,7 +207,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             console.log(val);
             const totalEvents = retrieveEvents(val);
             console.log(totalEvents);
-            stats = Object.assign({}, stats, totalEvents);
+            Object.assign(stats, totalEvents);
             return Log.aggregate(errorsAgg);
         }).then(function (val: any[]) {
             // console.log(val);
