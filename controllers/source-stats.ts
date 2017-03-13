@@ -192,17 +192,42 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                     "payload.originalRequest.data.user.user_id": { $exists: true }
                 }]
             }
+        }, {
+            $project: {
+                "transaction_id": 1,
+                "payload.session.user.userId": 1,
+                "payload.context.System.user.userId": 1,
+                "payload.originalRequest.data.user.user_id": 1,
+                "payload.request.type": 1,
+                "payload.result.action": 1
+            },
         },
         {
             $group: {
                 _id: {
                     $ifNull: ["$payload.session.user.userId",
                         { $ifNull: ["$payload.context.System.user.userId", "$payload.originalRequest.data.user.user_id"] }]
+                },
+                origin: {
+                    $addToSet: {
+                        $cond: {
+                            if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
+                            then: Constants.AMAZON_ALEXA,
+                            else: Constants.GOOGLE_HOME
+                        }
+                    }
                 }
             }
         }, {
             $match: {
                 _id: { $ne: undefined }
+            }
+        }, {
+            $unwind: "$origin",
+        }, {
+            $group: {
+                _id: "$origin",
+                count: { $sum: 1 }
             }
         }
     );
@@ -231,21 +256,14 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     return Log.aggregate(recordsAgg)
         .then(function (val: any[]) {
             retrieveTotals(stats, "totalEvents", val);
-            // Object.assign(stats, totalEvents);
             return Log.aggregate(errorsAgg);
         }).then(function (val: any[]) {
             retrieveTotals(stats, "totalExceptions", val);
-            // console.log(val);
-            // Object.assign(stats, totalExceptions);
             return Log.aggregate(usersAgg);
         }).then(function (val: any[]) {
-            // console.log(val);
-            Object.assign(result, { totalUsers: val.length });
+            retrieveTotals(stats, "totalUsers", val);
             return result;
         }).then(function (result: any) {
-            // stats.stats.totalEvents = result.totalEvents;
-            // stats.stats.totalExceptions = result.totalExceptions;
-            // stats.stats.totalUsers = result.totalUsers;
             sendResult(res, stats);
             return stats;
         }).catch(function (err: Error) {
