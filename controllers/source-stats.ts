@@ -9,13 +9,17 @@ import Log from "../lib/log";
 import Console from "../lib/console-utils";
 import Constants from "../lib/constants";
 
+export interface TotalStat {
+    totalUsers: number;
+    totalExceptions: number;
+    totalEvents: number;
+}
+
 export interface SourceStats {
     source: string;
-    stats: {
-        totalUsers: number;
-        totalExceptions: number;
-        totalEvents: number;
-    };
+    stats: TotalStat;
+    "Amazon.Alexa"?: TotalStat;
+    "Google.Home"?: TotalStat;
 }
 
 /**
@@ -185,17 +189,25 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             totalUsers: 0,
             totalExceptions: 0,
             totalEvents: 0
+        },
+        "Amazon.Alexa": {
+            totalUsers: 0,
+            totalExceptions: 0,
+            totalEvents: 0
+        },
+        "Google.Home": {
+            totalUsers: 0,
+            totalExceptions: 0,
+            totalEvents: 0
         }
     };
 
     return Log.aggregate(recordsAgg)
         .then(function (val: any[]) {
             console.log(val);
-            let totalEvents: number = 0;
-            for (let i = 0; i < val.length; ++i) {
-                totalEvents += val[i].count;
-            }
-            Object.assign(result, { totalEvents: totalEvents });
+            const totalEvents = retrieveEvents(val);
+            console.log(totalEvents);
+            stats = Object.assign({}, stats, totalEvents);
             return Log.aggregate(errorsAgg);
         }).then(function (val: any[]) {
             // console.log(val);
@@ -206,15 +218,25 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             Object.assign(result, { totalUsers: val.length });
             return result;
         }).then(function (result: any) {
-            stats.stats.totalEvents = result.totalEvents;
-            stats.stats.totalExceptions = result.totalExceptions;
-            stats.stats.totalUsers = result.totalUsers;
+            // stats.stats.totalEvents = result.totalEvents;
+            // stats.stats.totalExceptions = result.totalExceptions;
+            // stats.stats.totalUsers = result.totalUsers;
             sendResult(res, stats);
             return stats;
         }).catch(function (err: Error) {
             errorOut(err, res);
             return stats;
         });
+}
+
+function retrieveEvents(val: any[]): any {
+    let totals: any = { stats: { totalEvents: 0 }};
+    for (let i = 0; i < val.length; ++i) {
+        const value = val[i];
+        totals[value._id] = { totalEvents: value.count };
+        totals["stats"].totalEvents += value.count;
+    }
+    return totals;
 }
 
 function sendResult(response: Response, result: any) {
