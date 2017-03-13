@@ -7,6 +7,7 @@ import { getDateRange } from "./query-utils";
 
 import Log from "../lib/log";
 import Console from "../lib/console-utils";
+import Constants from "../lib/constants";
 
 export interface SourceStats {
     source: string;
@@ -108,7 +109,36 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 
     recordsAgg.push(
         {
-            $group: { _id: "$transaction_id" }
+            $match: {
+                "transaction_id": { $exists: true }
+            },
+        },
+        {
+            $project: {
+                "transaction_id": 1,
+                "payload.request.type": 1,
+                "payload.result.action": 1
+            },
+        }, {
+            $group: {
+                _id: "$transaction_id",
+                origin: {
+                    $addToSet: {
+                        $cond: {
+                            if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
+                            then: Constants.AMAZON_ALEXA,
+                            else: Constants.GOOGLE_HOME
+                        }
+                    }
+                }
+            }
+        }, {
+            $unwind: "$origin",
+        }, {
+            $group: {
+                _id: "$origin",
+                count: { $sum: 1 }
+            }
         }
     );
 
@@ -160,13 +190,19 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 
     return Log.aggregate(recordsAgg)
         .then(function (val: any[]) {
-            Object.assign(result, { totalEvents: val.length });
+            console.log(val);
+            let totalEvents: number = 0;
+            for (let i = 0; i < val.length; ++i) {
+                totalEvents += val[i].count;
+            }
+            Object.assign(result, { totalEvents: totalEvents });
             return Log.aggregate(errorsAgg);
         }).then(function (val: any[]) {
+            // console.log(val);
             Object.assign(result, { totalExceptions: val.length });
             return Log.aggregate(usersAgg);
         }).then(function (val: any[]) {
-            console.log(val);
+            // console.log(val);
             Object.assign(result, { totalUsers: val.length });
             return result;
         }).then(function (result: any) {
@@ -179,103 +215,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             errorOut(err, res);
             return stats;
         });
-
-    /**************************** MongoDB 3.4 compatible query. Use if and when remote server gets updated. ***********************/
-    // Using facet aggregation to put all the stats together by one.
-    // 3.4 does not allow $facet. This would be a faster query when the remote server gets updated.
-    // aggregation.push({
-    //     $facet: {
-    //         records: [
-    //             {
-    //                 $group: { _id: "$transaction_id" }
-    //             },
-    //             {
-    //                 $count: "totalEvents"
-    //             }
-    //         ],
-    //         errors: [
-    //             {
-    //                 $match: { log_type: "ERROR" },
-    //             },
-    //             {
-    //                 $count: "totalExceptions"
-    //             }
-    //         ],
-    //         sessionUsers: [
-    //             {
-    //                 $group: {
-    //                     _id: null,
-    //                     ID: {
-    //                         $addToSet: {
-    //                             foo_id: "$payload.session.user.userId",
-    //                             bar_id: "$payload.context.System.user.userId"
-    //                         }
-    //                     }
-    //                 }
-    //             },
-    //             {
-    //                 $project: {
-    //                     ID: {
-    //                         $setUnion: ["$ID.foo_id", "$ID.bar_id"]
-    //                     },
-    //                     _id: 0
-    //                 }
-    //             },
-    //             {
-    //                 $project: {
-    //                     ID: {
-    //                         $filter: { input: "$ID", as: "id", cond: { $ne: [{ $type: "$$id" }, "undefined"] } }
-    //                     }
-    //                 }
-    //             },
-    //             {
-    //                 $project: {
-    //                     _id: 0,
-    //                     totalUsers: { $size: "$ID" }
-    //                 }
-    //             }
-    //         ]
-    //     }
-    // });
-
-    // return Log.aggregate(aggregation)
-    //     .then(function (val: any[]): SourceStats {
-    //         const record: any = val[0];
-    //         const stats: SourceStats = processRecord(sourceId, record);
-    //         sendResult(res, stats);
-    //         return stats;
-    //     }).catch(function (err: Error) {
-    //         errorOut(err, res);
-    //         return {
-    //             source: "",
-    //             stats: undefined
-    //         };
-    //     });
 }
-
-/************** MongoDB 3.4 compatible code. ***************/
-// function processRecord(sourceId: string, record: any): SourceStats {
-//     if (record) {
-//         return {
-//             source: sourceId,
-//             stats: {
-//                 totalUsers: (record.sessionUsers[0]) ? record.sessionUsers[0].totalUsers : 0,
-//                 totalEvents: (record.records[0]) ? record.records[0].totalEvents : 0,
-//                 totalExceptions: (record.records[0]) ? record.errors[0].totalExceptions : 0
-//             }
-//         };
-//     } else {
-//         return {
-//             source: sourceId,
-//             stats: {
-//                 totalUsers: 0,
-//                 totalEvents: 0,
-//                 totalExceptions: 0
-//             }
-//         };
-//     }
-// }
-/************* MongoDB 3.4 compatible code. ********************/
 
 function sendResult(response: Response, result: any) {
     response.status(200).json(result);
