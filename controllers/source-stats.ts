@@ -120,7 +120,12 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             },
         }, {
             $match: {
-                "transaction_id": { $exists: true }
+                "transaction_id": { $exists: true },
+                $or: [{
+                    "payload.request.type": { $exists: true }
+                }, {
+                    "payload.result.action": { $exists: true }
+                }]
             },
         }, {
             $group: {
