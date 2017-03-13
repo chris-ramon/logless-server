@@ -149,6 +149,32 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     errorsAgg.push(
         {
             $match: { log_type: "ERROR" },
+        }, {
+            $project: {
+                "transaction_id": 1,
+                "payload.request.type": 1,
+                "payload.result.action": 1
+            },
+        }, {
+            $group: {
+                _id: "$transaction_id",
+                origin: {
+                    $addToSet: {
+                        $cond: {
+                            if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
+                            then: Constants.AMAZON_ALEXA,
+                            else: Constants.GOOGLE_HOME
+                        }
+                    }
+                }
+            }
+        }, {
+            $unwind: "$origin",
+        }, {
+            $group: {
+                _id: "$origin",
+                count: { $sum: 1 }
+            }
         }
     );
 
@@ -204,14 +230,13 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 
     return Log.aggregate(recordsAgg)
         .then(function (val: any[]) {
-            console.log(val);
-            const totalEvents = retrieveEvents(val);
-            console.log(totalEvents);
-            Object.assign(stats, totalEvents);
+            retrieveTotals(stats, "totalEvents", val);
+            // Object.assign(stats, totalEvents);
             return Log.aggregate(errorsAgg);
         }).then(function (val: any[]) {
+            retrieveTotals(stats, "totalExceptions", val);
             // console.log(val);
-            Object.assign(result, { totalExceptions: val.length });
+            // Object.assign(stats, totalExceptions);
             return Log.aggregate(usersAgg);
         }).then(function (val: any[]) {
             // console.log(val);
@@ -229,14 +254,17 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
         });
 }
 
-function retrieveEvents(val: any[]): any {
-    let totals: any = { stats: { totalEvents: 0 }};
+function retrieveTotals(stats: SourceStats, statValue: string, val: any[]): any {
+    console.info("Retrieving totals for " + statValue);
+    console.log(val);
+    stats.stats[statValue] = 0;
     for (let i = 0; i < val.length; ++i) {
         const value = val[i];
-        totals[value._id] = { totalEvents: value.count };
-        totals["stats"].totalEvents += value.count;
+        stats[value._id][statValue] = value.count;
+        stats.stats[statValue] += value.count;
     }
-    return totals;
+    console.log(stats);
+    return stats;
 }
 
 function sendResult(response: Response, result: any) {
