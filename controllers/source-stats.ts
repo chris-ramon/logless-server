@@ -226,8 +226,11 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 }
             }
         }, {
-            // Unwinding all types to group them
-            $unwind: "$origin"
+            // Unwinding all types to group them.  Since we filtered out "unknown", all empty arrays will be "unknown".
+            $unwind: {
+                path: "$origin",
+                preserveNullAndEmptyArrays: true
+            }
         }, {
             // Regroup and count.
             $group: {
@@ -350,7 +353,8 @@ function retrieveTotals(stats: SourceStats, statValue: string, val: any[]): any 
     stats.stats[statValue] = 0;
     for (let i = 0; i < val.length; ++i) {
         const value = val[i];
-        stats[value._id][statValue] = value.count;
+        const id = (value._id) ? value._id : Constants.UNKNOWN;
+        stats[id][statValue] = value.count;
         stats.stats[statValue] += value.count;
     }
     console.log(stats);
