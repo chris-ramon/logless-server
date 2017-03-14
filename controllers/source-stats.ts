@@ -200,7 +200,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 }
             }
         }, {
-            // Unwinding all times so we can filter them.
+            // Unwinding all types to group them
             $unwind: "$types"
         }, {
             // Regroup and count.
