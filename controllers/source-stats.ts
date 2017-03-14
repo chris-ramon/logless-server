@@ -113,12 +113,14 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 
     recordsAgg.push(
         {
+            // Project only the items we need.
             $project: {
                 "transaction_id": 1,
                 "payload.request.type": 1,
                 "payload.result.action": 1
             },
         }, {
+            // Match only the logs that we can use.
             $match: {
                 "transaction_id": { $exists: true },
                 $or: [{
@@ -128,6 +130,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 }]
             },
         }, {
+            // Group by transaction ID and collect origin.
             $group: {
                 _id: "$transaction_id",
                 origin: {
@@ -141,8 +144,10 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 }
             }
         }, {
+            // Unwind origin.
             $unwind: "$origin",
         }, {
+            // Count the origin.
             $group: {
                 _id: "$origin",
                 count: { $sum: 1 }
@@ -152,6 +157,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
 
     errorsAgg.push(
         {
+            // Keep in memory only what we need.
             $project: {
                 "log_type": 1,
                 "transaction_id": 1,
@@ -159,25 +165,47 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 "payload.result.action": 1
             },
         }, {
-            $match: { log_type: "ERROR" },
-        }, {
+            // Group by transaction ID so all log types related will be covered.  This will capture log types that don't have a payload,
+            // and group them to their request-response logs.  It will push the type to a stack to not lose information.
             $group: {
                 _id: "$transaction_id",
-                origin: {
-                    $addToSet: {
-                        $cond: {
-                            if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
-                            then: Constants.AMAZON_ALEXA,
-                            else: Constants.GOOGLE_HOME
+                types: {
+                    $push: {
+                        log_type: "$log_type", origin: {
+                            $cond: {
+                                if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
+                                then: Constants.AMAZON_ALEXA,
+                                else: Constants.GOOGLE_HOME
+                            }
                         }
                     }
                 }
             }
         }, {
-            $unwind: "$origin",
+            // Project only the types that are of ERROR
+            $project: {
+                types: {
+                    $filter: {
+                        input: "$types",
+                        as: "type",
+                        cond: { $eq: ["$$type.log_type", "ERROR"] }
+                    }
+                }
+            },
         }, {
+            // Clear out any empty logs (They didn't have ERROR)
+            $match: {
+                types: {
+                    $ne: []
+                }
+            }
+        }, {
+            // Unwinding all times so we can filter them.
+            $unwind: "$types"
+        }, {
+            // Regroup and count.
             $group: {
-                _id: "$origin",
+                _id: "$types.origin",
                 count: { $sum: 1 }
             }
         }
@@ -188,6 +216,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     // "$payload.originalRequest.data.user.user_id" Google Home (API.AI)
     usersAgg.push(
         {
+            // Match only the items we need.
             $project: {
                 "transaction_id": 1,
                 "payload.session.user.userId": 1,
@@ -197,6 +226,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 "payload.result.action": 1
             }
         }, {
+            // Filter only the logs that have users. Can't decipher the ones that don't.
             $match: {
                 $or: [{
                     "payload.session.user.userId": { $exists: true }
@@ -207,6 +237,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 }]
             }
         }, {
+            // Group all the logs with the same user ID.  Caputer the origin.
             $group: {
                 _id: {
                     $ifNull: ["$payload.session.user.userId",
@@ -223,12 +254,15 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 }
             }
         }, {
+            // Remove undefined users.
             $match: {
                 _id: { $ne: undefined }
             }
         }, {
+            // Split out the origin array.
             $unwind: "$origin",
         }, {
+            // Regroup and count.
             $group: {
                 _id: "$origin",
                 count: { $sum: 1 }
@@ -262,6 +296,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             retrieveTotals(stats, "totalEvents", val);
             return Log.aggregate(errorsAgg);
         }).then(function (val: any[]) {
+            console.log(val);
             retrieveTotals(stats, "totalExceptions", val);
             return Log.aggregate(usersAgg);
         }).then(function (val: any[]) {
