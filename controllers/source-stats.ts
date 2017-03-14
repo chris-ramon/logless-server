@@ -178,27 +178,38 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             // and group them to their request-response logs.  It will push the type to a stack to not lose information.
             $group: {
                 _id: "$transaction_id",
-                types: {
-                    $push: {
-                        log_type: "$log_type", origin: {
-                            $cond: {
-                                if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
-                                then: Constants.AMAZON_ALEXA,
-                                else: {
-                                    $cond: {
-                                        if: { $ne: [{ $ifNull: ["$payload.result.action", "missing"] }, "missing"] },
-                                        then: Constants.GOOGLE_HOME,
-                                        else: Constants.UNKNOWN
-                                    }
+                origin: {
+                    $addToSet: {
+                        $cond: {
+                            if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
+                            then: Constants.AMAZON_ALEXA,
+                            else: {
+                                $cond: {
+                                    if: { $ne: [{ $ifNull: ["$payload.result.action", "missing"] }, "missing"] },
+                                    then: Constants.GOOGLE_HOME,
+                                    else: Constants.UNKNOWN
                                 }
                             }
                         }
                     }
+                },
+                types: {
+                    $push: {
+                        log_type: "$log_type"
+                    }
                 }
             }
         }, {
-            // Project only the types that are of ERROR
+            // Project only the types that are of ERROR.  Also, only collect origins that we know.
+            // At this stage, the origin will either be ["unknown"] or ["valid_origin", "unkonwn"].  So, remove all multi-value arrays with "unknown".
             $project: {
+                origin: {
+                    $filter: {
+                        input: "$origin",
+                        as: "o",
+                        cond: { $ne: [ "$$o", Constants.UNKNOWN ] }
+                    }
+                },
                 types: {
                     $filter: {
                         input: "$types",
@@ -216,11 +227,11 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             }
         }, {
             // Unwinding all types to group them
-            $unwind: "$types"
+            $unwind: "$origin"
         }, {
             // Regroup and count.
             $group: {
-                _id: "$types.origin",
+                _id: "$origin",
                 count: { $sum: 1 }
             }
         }
