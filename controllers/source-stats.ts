@@ -20,6 +20,7 @@ export interface SourceStats {
     stats: TotalStat;
     "Amazon.Alexa"?: TotalStat;
     "Google.Home"?: TotalStat;
+    Unknown?: TotalStat;
 }
 
 /**
@@ -111,6 +112,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     const errorsAgg: any[] = aggregation.slice();
     const usersAgg: any[] = aggregation.slice();
 
+    // Records is the number of "conversations" found.  I.E.  Of all transactions.
     recordsAgg.push(
         {
             // Project only the items we need.
@@ -138,7 +140,13 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                         $cond: {
                             if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
                             then: Constants.AMAZON_ALEXA,
-                            else: Constants.GOOGLE_HOME
+                            else: {
+                                $cond: {
+                                    if: { $ne: [{ $ifNull: ["$payload.result.action", "missing"] }, "missing"] },
+                                    then: Constants.GOOGLE_HOME,
+                                    else: Constants.UNKNOWN
+                                }
+                            }
                         }
                     }
                 }
@@ -147,7 +155,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             // Unwind origin.
             $unwind: "$origin",
         }, {
-            // Count the origin.
+            // Count the origin occurances.
             $group: {
                 _id: "$origin",
                 count: { $sum: 1 }
@@ -155,6 +163,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
         }
     );
 
+    // Errors is supposed to find the number of ERROR logs that are occurred.
     errorsAgg.push(
         {
             // Keep in memory only what we need.
@@ -175,7 +184,13 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                             $cond: {
                                 if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
                                 then: Constants.AMAZON_ALEXA,
-                                else: Constants.GOOGLE_HOME
+                                else: {
+                                    $cond: {
+                                        if: { $ne: [{ $ifNull: ["$payload.result.action", "missing"] }, "missing"] },
+                                        then: Constants.GOOGLE_HOME,
+                                        else: Constants.UNKNOWN
+                                    }
+                                }
                             }
                         }
                     }
@@ -211,6 +226,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
         }
     );
 
+    // Users is to find the number of unique users that occur on each device.
     // "$payload.session.user.userId" Amazon
     // "$payload.context.System.user.userId" Amazon
     // "$payload.originalRequest.data.user.user_id" Google Home (API.AI)
@@ -218,12 +234,9 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
         {
             // Match only the items we need.
             $project: {
-                "transaction_id": 1,
                 "payload.session.user.userId": 1,
                 "payload.context.System.user.userId": 1,
                 "payload.originalRequest.data.user.user_id": 1,
-                "payload.request.type": 1,
-                "payload.result.action": 1
             }
         }, {
             // Filter only the logs that have users. Can't decipher the ones that don't.
@@ -246,9 +259,15 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 origin: {
                     $addToSet: {
                         $cond: {
-                            if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
+                            if: { $ne: [{ $ifNull: ["$payload.context.System.user.userId", "missing"] }, "missing"] },
                             then: Constants.AMAZON_ALEXA,
-                            else: Constants.GOOGLE_HOME
+                            else: {
+                                $cond: {
+                                    if: { $ne: [{ $ifNull: ["$payload.originalRequest.data.user.user_id", "missing"] }, "missing"] },
+                                    then: Constants.GOOGLE_HOME,
+                                    else: Constants.UNKNOWN
+                                }
+                            }
                         }
                     }
                 }
@@ -285,6 +304,11 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             totalEvents: 0
         },
         "Google.Home": {
+            totalUsers: 0,
+            totalExceptions: 0,
+            totalEvents: 0
+        },
+        Unknown: {
             totalUsers: 0,
             totalExceptions: 0,
             totalEvents: 0
