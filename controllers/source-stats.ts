@@ -7,14 +7,20 @@ import { getDateRange } from "./query-utils";
 
 import Log from "../lib/log";
 import Console from "../lib/console-utils";
+import Constants from "../lib/constants";
+
+export interface TotalStat {
+    totalUsers: number;
+    totalExceptions: number;
+    totalEvents: number;
+}
 
 export interface SourceStats {
     source: string;
-    stats: {
-        totalUsers: number;
-        totalExceptions: number;
-        totalEvents: number;
-    };
+    stats: TotalStat;
+    "Amazon.Alexa"?: TotalStat;
+    "Google.Home"?: TotalStat;
+    Unknown?: TotalStat;
 }
 
 /**
@@ -106,23 +112,148 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
     const errorsAgg: any[] = aggregation.slice();
     const usersAgg: any[] = aggregation.slice();
 
+    // Records is the number of "conversations" found.  I.E.  Of all transactions.
     recordsAgg.push(
         {
-            $group: { _id: "$transaction_id" }
+            // Project only the items we need.
+            $project: {
+                "transaction_id": 1,
+                "payload.request.type": 1,
+                "payload.result.action": 1
+            },
+        }, {
+            // Match only the logs that we can use.
+            $match: {
+                "transaction_id": { $exists: true },
+                $or: [{
+                    "payload.request.type": { $exists: true }
+                }, {
+                    "payload.result.action": { $exists: true }
+                }]
+            },
+        }, {
+            // Group by transaction ID and collect origin.
+            $group: {
+                _id: "$transaction_id",
+                origin: {
+                    $addToSet: {
+                        $cond: {
+                            if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
+                            then: Constants.AMAZON_ALEXA,
+                            else: {
+                                $cond: {
+                                    if: { $ne: [{ $ifNull: ["$payload.result.action", "missing"] }, "missing"] },
+                                    then: Constants.GOOGLE_HOME,
+                                    else: Constants.UNKNOWN
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }, {
+            // Unwind origin.
+            $unwind: "$origin",
+        }, {
+            // Count the origin occurances.
+            $group: {
+                _id: "$origin",
+                count: { $sum: 1 }
+            }
         }
     );
 
+    // Errors is supposed to find the number of ERROR logs that are occurred.
     errorsAgg.push(
         {
-            $match: { log_type: "ERROR" },
+            // Keep in memory only what we need.
+            $project: {
+                "log_type": 1,
+                "transaction_id": 1,
+                "payload.request.type": 1,
+                "payload.result.action": 1
+            },
+        }, {
+            // Group by transaction ID so all log types related will be covered.  This will capture log types that don't have a payload,
+            // and group them to their request-response logs.  It will push the type to a stack to not lose information.
+            $group: {
+                _id: "$transaction_id",
+                origin: {
+                    $addToSet: {
+                        $cond: {
+                            if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
+                            then: Constants.AMAZON_ALEXA,
+                            else: {
+                                $cond: {
+                                    if: { $ne: [{ $ifNull: ["$payload.result.action", "missing"] }, "missing"] },
+                                    then: Constants.GOOGLE_HOME,
+                                    else: Constants.UNKNOWN
+                                }
+                            }
+                        }
+                    }
+                },
+                types: {
+                    $push: {
+                        log_type: "$log_type"
+                    }
+                }
+            }
+        }, {
+            // Project only the types that are of ERROR.  Also, only collect origins that we know.
+            // At this stage, the origin will either be ["unknown"] or ["valid_origin", "unkonwn"].  So, remove all multi-value arrays with "unknown".
+            $project: {
+                origin: {
+                    $filter: {
+                        input: "$origin",
+                        as: "o",
+                        cond: { $ne: [ "$$o", Constants.UNKNOWN ] }
+                    }
+                },
+                types: {
+                    $filter: {
+                        input: "$types",
+                        as: "type",
+                        cond: { $eq: ["$$type.log_type", "ERROR"] }
+                    }
+                }
+            },
+        }, {
+            // Clear out any empty logs (They didn't have ERROR)
+            $match: {
+                types: {
+                    $ne: []
+                }
+            }
+        }, {
+            // Unwinding all types to group them.  Since we filtered out "unknown", all empty arrays will be "unknown".
+            $unwind: {
+                path: "$origin",
+                preserveNullAndEmptyArrays: true
+            }
+        }, {
+            // Regroup and count.
+            $group: {
+                _id: "$origin",
+                count: { $sum: 1 }
+            }
         }
     );
 
+    // Users is to find the number of unique users that occur on each device.
     // "$payload.session.user.userId" Amazon
     // "$payload.context.System.user.userId" Amazon
     // "$payload.originalRequest.data.user.user_id" Google Home (API.AI)
     usersAgg.push(
         {
+            // Match only the items we need.
+            $project: {
+                "payload.session.user.userId": 1,
+                "payload.context.System.user.userId": 1,
+                "payload.originalRequest.data.user.user_id": 1,
+            }
+        }, {
+            // Filter only the logs that have users. Can't decipher the ones that don't.
             $match: {
                 $or: [{
                     "payload.session.user.userId": { $exists: true }
@@ -132,17 +263,42 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                     "payload.originalRequest.data.user.user_id": { $exists: true }
                 }]
             }
-        },
-        {
+        }, {
+            // Group all the logs with the same user ID.  Caputer the origin.
             $group: {
                 _id: {
                     $ifNull: ["$payload.session.user.userId",
                         { $ifNull: ["$payload.context.System.user.userId", "$payload.originalRequest.data.user.user_id"] }]
+                },
+                origin: {
+                    $addToSet: {
+                        $cond: {
+                            if: { $ne: [{ $ifNull: ["$payload.context.System.user.userId", "missing"] }, "missing"] },
+                            then: Constants.AMAZON_ALEXA,
+                            else: {
+                                $cond: {
+                                    if: { $ne: [{ $ifNull: ["$payload.originalRequest.data.user.user_id", "missing"] }, "missing"] },
+                                    then: Constants.GOOGLE_HOME,
+                                    else: Constants.UNKNOWN
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }, {
+            // Remove undefined users.
             $match: {
                 _id: { $ne: undefined }
+            }
+        }, {
+            // Split out the origin array.
+            $unwind: "$origin",
+        }, {
+            // Regroup and count.
+            $group: {
+                _id: "$origin",
+                count: { $sum: 1 }
             }
         }
     );
@@ -155,127 +311,55 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             totalUsers: 0,
             totalExceptions: 0,
             totalEvents: 0
+        },
+        "Amazon.Alexa": {
+            totalUsers: 0,
+            totalExceptions: 0,
+            totalEvents: 0
+        },
+        "Google.Home": {
+            totalUsers: 0,
+            totalExceptions: 0,
+            totalEvents: 0
+        },
+        Unknown: {
+            totalUsers: 0,
+            totalExceptions: 0,
+            totalEvents: 0
         }
     };
 
     return Log.aggregate(recordsAgg)
         .then(function (val: any[]) {
-            Object.assign(result, { totalEvents: val.length });
+            retrieveTotals(stats, "totalEvents", val);
             return Log.aggregate(errorsAgg);
         }).then(function (val: any[]) {
-            Object.assign(result, { totalExceptions: val.length });
+            console.log(val);
+            retrieveTotals(stats, "totalExceptions", val);
             return Log.aggregate(usersAgg);
         }).then(function (val: any[]) {
-            console.log(val);
-            Object.assign(result, { totalUsers: val.length });
+            retrieveTotals(stats, "totalUsers", val);
             return result;
         }).then(function (result: any) {
-            stats.stats.totalEvents = result.totalEvents;
-            stats.stats.totalExceptions = result.totalExceptions;
-            stats.stats.totalUsers = result.totalUsers;
             sendResult(res, stats);
             return stats;
         }).catch(function (err: Error) {
             errorOut(err, res);
             return stats;
         });
-
-    /**************************** MongoDB 3.4 compatible query. Use if and when remote server gets updated. ***********************/
-    // Using facet aggregation to put all the stats together by one.
-    // 3.4 does not allow $facet. This would be a faster query when the remote server gets updated.
-    // aggregation.push({
-    //     $facet: {
-    //         records: [
-    //             {
-    //                 $group: { _id: "$transaction_id" }
-    //             },
-    //             {
-    //                 $count: "totalEvents"
-    //             }
-    //         ],
-    //         errors: [
-    //             {
-    //                 $match: { log_type: "ERROR" },
-    //             },
-    //             {
-    //                 $count: "totalExceptions"
-    //             }
-    //         ],
-    //         sessionUsers: [
-    //             {
-    //                 $group: {
-    //                     _id: null,
-    //                     ID: {
-    //                         $addToSet: {
-    //                             foo_id: "$payload.session.user.userId",
-    //                             bar_id: "$payload.context.System.user.userId"
-    //                         }
-    //                     }
-    //                 }
-    //             },
-    //             {
-    //                 $project: {
-    //                     ID: {
-    //                         $setUnion: ["$ID.foo_id", "$ID.bar_id"]
-    //                     },
-    //                     _id: 0
-    //                 }
-    //             },
-    //             {
-    //                 $project: {
-    //                     ID: {
-    //                         $filter: { input: "$ID", as: "id", cond: { $ne: [{ $type: "$$id" }, "undefined"] } }
-    //                     }
-    //                 }
-    //             },
-    //             {
-    //                 $project: {
-    //                     _id: 0,
-    //                     totalUsers: { $size: "$ID" }
-    //                 }
-    //             }
-    //         ]
-    //     }
-    // });
-
-    // return Log.aggregate(aggregation)
-    //     .then(function (val: any[]): SourceStats {
-    //         const record: any = val[0];
-    //         const stats: SourceStats = processRecord(sourceId, record);
-    //         sendResult(res, stats);
-    //         return stats;
-    //     }).catch(function (err: Error) {
-    //         errorOut(err, res);
-    //         return {
-    //             source: "",
-    //             stats: undefined
-    //         };
-    //     });
 }
 
-/************** MongoDB 3.4 compatible code. ***************/
-// function processRecord(sourceId: string, record: any): SourceStats {
-//     if (record) {
-//         return {
-//             source: sourceId,
-//             stats: {
-//                 totalUsers: (record.sessionUsers[0]) ? record.sessionUsers[0].totalUsers : 0,
-//                 totalEvents: (record.records[0]) ? record.records[0].totalEvents : 0,
-//                 totalExceptions: (record.records[0]) ? record.errors[0].totalExceptions : 0
-//             }
-//         };
-//     } else {
-//         return {
-//             source: sourceId,
-//             stats: {
-//                 totalUsers: 0,
-//                 totalEvents: 0,
-//                 totalExceptions: 0
-//             }
-//         };
-//     }
-// }
-/************* MongoDB 3.4 compatible code. ********************/
+function retrieveTotals(stats: SourceStats, statValue: string, val: any[]): any {
+    stats.stats[statValue] = 0;
+    for (let i = 0; i < val.length; ++i) {
+        const value = val[i];
+        const id = (value._id) ? value._id : Constants.UNKNOWN;
+        stats[id][statValue] = value.count;
+        stats.stats[statValue] += value.count;
+    }
+    console.log(stats);
+    return stats;
+}
 
 function sendResult(response: Response, result: any) {
     response.status(200).json(result);

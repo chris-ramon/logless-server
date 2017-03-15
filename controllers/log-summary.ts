@@ -267,21 +267,20 @@ export function fillGapsInBucket(buckets: TimeBucket[] = [], dateRange: DateRang
 
     let startDate: moment.Moment = moment(buckets[0].date);
     let endDate: moment.Moment = moment(buckets[buckets.length - 1].date);
-
     if (increasing) {
         if (dateRange.start_time) {
-            startDate = dateRange.start_time;
+            startDate = dateRange.start_time.clone();
             startDate.subtract(1, granularity);
         }
         if (dateRange.end_time) {
-            endDate = dateRange.end_time;
+            endDate = dateRange.end_time.clone();
         }
     } else {
         if (dateRange.start_time) {
-            endDate = dateRange.start_time;
+            endDate = dateRange.start_time.clone();
         }
         if (dateRange.end_time) {
-            startDate = dateRange.end_time;
+            startDate = dateRange.end_time.clone();
             startDate.add(1, granularity);
         }
     }
