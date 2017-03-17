@@ -119,7 +119,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
             $project: {
                 "transaction_id": 1,
                 "payload.request.type": 1,
-                "payload.result.action": 1
+                "payload.result.metadata.intentName": 1
             },
         }, {
             // Match only the logs that we can use.
@@ -128,7 +128,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 $or: [{
                     "payload.request.type": { $exists: true }
                 }, {
-                    "payload.result.action": { $exists: true }
+                    "payload.result.metadata.intentName": { $exists: true }
                 }]
             },
         }, {
@@ -142,7 +142,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                             then: Constants.AMAZON_ALEXA,
                             else: {
                                 $cond: {
-                                    if: { $ne: [{ $ifNull: ["$payload.result.action", "missing"] }, "missing"] },
+                                    if: { $ne: [{ $ifNull: ["$payload.result.metadata.intentName", "missing"] }, "missing"] },
                                     then: Constants.GOOGLE_HOME,
                                     else: Constants.UNKNOWN
                                 }
@@ -171,7 +171,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 "log_type": 1,
                 "transaction_id": 1,
                 "payload.request.type": 1,
-                "payload.result.action": 1
+                "payload.result.metadata.intentName": 1
             },
         }, {
             // Group by transaction ID so all log types related will be covered.  This will capture log types that don't have a payload,
@@ -185,7 +185,7 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                             then: Constants.AMAZON_ALEXA,
                             else: {
                                 $cond: {
-                                    if: { $ne: [{ $ifNull: ["$payload.result.action", "missing"] }, "missing"] },
+                                    if: { $ne: [{ $ifNull: ["$payload.result.metadata.intentName", "missing"] }, "missing"] },
                                     then: Constants.GOOGLE_HOME,
                                     else: Constants.UNKNOWN
                                 }

@@ -108,10 +108,10 @@ export default function (req: Request, res: Response): Promise<CountResult> {
                         else: "$payload.request.type"
                     }
                 },
-                "google": "$payload.result.action"
+                "google": "$payload.result.metadata.intentName"
             },
             count: { $sum: 1 },
-            type: { $addToSet: { $ifNull: ["$payload.result.action", "$payload.request.type"] } },
+            type: { $addToSet: { $ifNull: ["$payload.result.metadata.intentName", "$payload.request.type"] } },
             origin: {
                 $addToSet: {
                     $cond: {
@@ -123,32 +123,6 @@ export default function (req: Request, res: Response): Promise<CountResult> {
             }
         }
     });
-
-
-    // aggregation.push({
-    //     $group: {
-    //         _id: {
-    //             $cond: {
-    //                 if: { $eq: ["$payload.request.type", "IntentRequest"] },
-    //                 then: "$payload.request.intent.name",
-    //                 else: {
-    //                     $ifNull: ["$payload.request.type", { $ifNull: ["$payload.result.action", "remaining"] }]
-    //                 }
-    //             }
-    //         },
-    //         type: { $addToSet: { $ifNull: ["$payload.result.action", "$payload.request.type"] } },
-    //         origin: {
-    //             $addToSet: {
-    //                 $cond: {
-    //                     if: { $ne: [{ $ifNull: ["$payload.request.type", "missing"] }, "missing"] },
-    //                     then: AMAZON_ALEXA,
-    //                     else: GOOGLE_HOME
-    //                 }
-    //             }
-    //         },
-    //         count: { $sum: 1 }
-    //     }
-    // });
 
     // Only push if there is a value "count_sort" in the request.
     if (reqQuer.count_sort) {
