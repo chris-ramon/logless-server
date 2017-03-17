@@ -108,7 +108,13 @@ export default function (req: Request, res: Response): Promise<CountResult> {
                         else: "$payload.request.type"
                     }
                 },
-                "google": "$payload.result.metadata.intentName"
+                "google": {
+                    $cond: {
+                        if: { $eq: [{ $ifNull: ["$payload.result.action", "missing"] }, "missing"] },
+                        then: "$payload.result.metadata.intentName",
+                        else: "$payload.result.action"
+                    }
+                }
             },
             count: { $sum: 1 },
             type: { $addToSet: { $ifNull: ["$payload.result.metadata.intentName", "$payload.request.type"] } },
