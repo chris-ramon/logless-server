@@ -251,9 +251,11 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                 "payload.session.user.userId": 1,
                 "payload.context.System.user.userId": 1,
                 "payload.originalRequest.data.user.user_id": 1,
+                "payload.originalRequest.data.inputs": 1
             }
         }, {
             // Filter only the logs that have users. Can't decipher the ones that don't.
+            // Also removing the health check logs in user data from the count.
             $match: {
                 $or: [{
                     "payload.session.user.userId": { $exists: true }
@@ -261,7 +263,8 @@ export default function (req: Request, res: Response): Promise<SourceStats> {
                     "payload.context.System.user.userId": { $exists: true }
                 }, {
                     "payload.originalRequest.data.user.user_id": { $exists: true }
-                }]
+                }],
+                "payload.originalRequest.data.inputs.arguments.name": { $ne: "is_health_check" }
             }
         }, {
             // Group all the logs with the same user ID.  Caputer the origin.
