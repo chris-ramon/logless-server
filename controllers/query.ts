@@ -20,6 +20,11 @@ import {ServerConfig} from "../lib/server-config";
  *         description: Log source id
  *         required: true
  *         type: string
+ *       - name: transaction_id
+ *         in: query
+ *         description: Transaction id
+ *         required: false
+ *         type: string
  *       - name: start_time
  *         in: query
  *         description: The start period to get logs from (ISO format)
@@ -90,6 +95,10 @@ export default function (req, res) {
     if (req.query.start_time) {
         Object.assign(query.timestamp, { $gt: req.query.start_time });
     } // no default
+
+    if (req.query.transaction_id) {
+        Object.assign(query, { transaction_id: req.query.transaction_id })
+    }
 
     if (ServerConfig.debug_mode) {
         console.time("query-" + req.query.source);
