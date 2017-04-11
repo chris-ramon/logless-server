@@ -29,6 +29,8 @@ $ node bin/bst-logging-server.js
 
 (See me for the password. It's not that.)
 
+For running `bst-logging-server` locally, see: [`docs/local.md`](docs/local.md)
+
 ## Configuration
 
 You can tweak the config in ./config.properties but don't put Mongo credentials in it. Use **BST_MONGO_URL** environment variable instead.
